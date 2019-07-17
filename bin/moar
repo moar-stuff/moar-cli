@@ -1,0 +1,13 @@
+#!/bin/bash
+export MOAR_PACKAGE_DIR=`pwd`
+
+binDir="$( cd "$(dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+cd $binDir
+if [ -f "../moar-cli/moar-cli.js" ]; then
+  # invoked via npx on a local install
+  cd ../moar-cli
+else
+  # invoked via the global npm install
+  cd ../lib/node_modules/moar-cli
+fi
+node moar-cli.js "$@"

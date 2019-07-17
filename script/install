@@ -1,0 +1,6 @@
+#!/bin/bash
+
+script/build && \
+cd dist && \
+npm uninstall -g moar-cli && \
+npm install -g .
