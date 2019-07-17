@@ -1,0 +1,41 @@
+{
+  "name": "moar-cli",
+  "version": "2.5.100005",
+  "description": "Moar Module Managment for Git",
+  "bin": {
+    "moar": "bin/moar"
+  },
+  "main": "src/moar.js",
+  "scripts": {
+    "build": "rimraf dist && mkdir dist && cp -r bin dist/bin && tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moar-stuff/moar-cli.git"
+  },
+  "author": "Mark Farnsworth",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/moar-stuff/moar-cli/issues"
+  },
+  "homepage": "https://github.com/moar-stuff/moar-cli#README",
+  "dependencies": {
+    "@types/command-line-args": "^5.0.0",
+    "@types/command-line-usage": "^5.0.1",
+    "@types/node": "^12.6.1",
+    "chalk": "^2.4.2",
+    "command-line-args": "^5.1.1",
+    "command-line-usage": "^6.0.2",
+    "simple-git": "^1.120.0",
+    "ts-node": "^8.3.0",
+    "typescript": "^3.5.3"
+  },
+  "devDependencies": {
+    "rimraf": "^2.6.3",
+    "tslint": "^5.18.0"
+  },
+  "prettier": {
+    "singleQuote": true
+  }
+}
