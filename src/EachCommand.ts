@@ -21,7 +21,7 @@ export class EachCommand extends Command {
     }
 
     const argv = process.argv;
-    const defaultCommand = 'git fetch --no-tags --prune origin';
+    const defaultCommand = 'git remote update';
     let command = argv[argv.length - 1];
     if (command === 'e') {
       command = defaultCommand;
