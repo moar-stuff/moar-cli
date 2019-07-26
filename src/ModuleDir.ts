@@ -69,10 +69,6 @@ export class ModuleDir {
       this.workspaceDir.lastIndexOf('/') + 1
     );
     this.dir = this.workspaceDir + '/' + name;
-    this.name = name;
-    if (name.startsWith(workspaceName)) {
-      this.name = name.substr(workspaceName.length);
-    }
   }
 
   private static dropLastPathPart(workspaceDir: string) {
