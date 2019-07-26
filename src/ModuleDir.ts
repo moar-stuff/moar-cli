@@ -546,21 +546,16 @@ export class ModuleDir {
     if (this.errorOnPrepare) {
       indicator.pushText(' 💥ERROR', chalk.redBright);
     } else {
-      indicator.pushText(
-        ` ${
-          this.tagVerify.good === true
-            ? `● <${ModuleDir.simplifyRefName(this.tagVerify.tag)}> `
-            : this.tagVerify.good === false
-            ? `○ <${ModuleDir.simplifyRefName(this.tagVerify.tag)}> `
-            : this.tagVerify.tag.length > 0
-            ? `◌ <${ModuleDir.simplifyRefName(this.tagVerify.tag)}> `
-            : ' '
-        }${
-          textualChalk
-            ? textualChalk(this.headRelativeArea)
-            : this.headRelativeArea
-        }`
-      );
+      const signChalk = this.theme.signChalk;
+      if(this.tagVerify.good === true) {
+        indicator.pushText(`●<${ModuleDir.simplifyRefName(this.tagVerify.tag)}>`, signChalk);
+      } else if(this.tagVerify.good === false) {
+        indicator.pushText(`○<${ModuleDir.simplifyRefName(this.tagVerify.tag)}>`, signChalk);
+      } else if(this.tagVerify.tag.length > 0) {
+        indicator.pushText(`◌<${ModuleDir.simplifyRefName(this.tagVerify.tag)}>`);
+      }
+      indicator.pushText(' ');
+      indicator.pushText(this.headRelativeArea);
     }
     return indicator.content;
   }
