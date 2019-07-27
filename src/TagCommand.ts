@@ -6,6 +6,7 @@ import { CommandLineOptions } from 'command-line-args';
 
 import child_process from 'child_process';
 import util from 'util';
+import * as fs from 'fs';
 const exec = util.promisify(child_process.exec);
 
 /**
@@ -26,7 +27,10 @@ export class TagCommand extends Command {
     }
 
     const argv = process.argv;
-    const tag = argv[argv.length - 1];
+    const packageJson = fs.readFileSync(this.packageDir + '/package.json')
+    const packageVersion = JSON.parse(packageJson.toString()).version;
+    let tag = argv[argv.length - 1];
+    tag += packageVersion;
     let message = this.context['tag-message'];
     message += `\n${'-'.repeat(40)}\n`;
     let cmd = 'echo "$(git rev-parse HEAD) ${PWD##*/}"';
