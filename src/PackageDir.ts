@@ -557,7 +557,7 @@ export class PackageDir {
       } else if (this.tagVerify.good === false) {
         indicator.pushText(`○<${PackageDir.simplifyRefName(this.tagVerify.tag)}>`, signChalk);
       } else if (this.tagVerify.tag.length > 0) {
-        indicator.pushText(`◌<${PackageDir.simplifyRefName(this.tagVerify.tag)}>`);
+        indicator.pushText(`◌<${PackageDir.simplifyRefName(this.tagVerify.tag)}>`, signChalk);
       }
       indicator.pushText(' ');
       indicator.pushText(this.headRelativeArea);
