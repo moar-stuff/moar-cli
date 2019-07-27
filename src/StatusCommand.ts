@@ -55,6 +55,9 @@ export class StatusCommand extends Command {
     this.packageDirs.sort((a, b) => {
       let sortA = '';
       let sortB = '';
+      if(this.context.sort === 't')  {
+        this.context.sort = 'tag';
+      }
       if (this.context.sort === 'tag') {
         sortA = a.tagVerify.tag;
         sortB = b.tagVerify.tag;
