@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as simpleGit from 'simple-git/promise';
-import { ModuleDir } from './ModuleDir';
+import { PackageDir } from './PackageDir';
 import { Theme } from './Theme';
 import { Command } from './Command';
 import { CommandLineOptions } from 'command-line-args';
@@ -15,8 +15,8 @@ export class StatusCommand extends Command {
 
   private maxLen(prop: string) {
     let maxLen = 0;
-    for (const moduleDir of this.moduleDirs) {
-      let len = (<any>moduleDir)[prop];
+    for (const packageDir of this.packageDirs) {
+      let len = (<any>packageDir)[prop];
       maxLen = len > maxLen ? len : maxLen;
     }
     return maxLen;
@@ -26,33 +26,33 @@ export class StatusCommand extends Command {
    * Displays the Status for the Workspace
    */
   async run(errors: string[]): Promise<void> {
-    this.checkModuleDir(errors);
+    this.checkPackageDir(errors);
     if (errors.length > 0) {
       return;
     }
 
-    for (const workspaceModuleDir of this.workspaceDirs) {
+    for (const workDir of this.workspaceDirs) {
       if (
         fs.existsSync(
-          this.workspaceDir + '/' + workspaceModuleDir + '/.git/config'
+          this.workspaceDir + '/' + workDir + '/.git/config'
         )
       ) {
-        const gitModule = simpleGit.default(
-          this.workspaceDir + '/' + workspaceModuleDir
+        const git = simpleGit.default(
+          this.workspaceDir + '/' + workDir
         );
-        const moduleDir = new ModuleDir(
-          this.moduleDir,
-          workspaceModuleDir,
-          gitModule,
+        const packageDir = new PackageDir(
+          this.packageDir,
+          workDir,
+          git,
           this.theme,
           this.context
         );
-        await moduleDir.prepare(false);
-        this.moduleDirs.push(moduleDir);
+        await packageDir.prepare(false);
+        this.packageDirs.push(packageDir);
       }
     }
 
-    this.moduleDirs.sort((a, b) => {
+    this.packageDirs.sort((a, b) => {
       let sortA = '';
       let sortB = '';
       if (this.context.sort === 'tag') {
@@ -76,7 +76,7 @@ export class StatusCommand extends Command {
     let maxUnmergedLen = this.maxLen('unmergedAreaLen');
 
     const labelConfig = { color: true, size: maxDevelopLen };
-    for (const memberDir of this.moduleDirs) {
+    for (const memberDir of this.packageDirs) {
       const nameLen = memberDir.nameAreaLen;
       const currentLen = memberDir.currentAreaLen;
       const trackingLen = memberDir.trackingAreaLen;

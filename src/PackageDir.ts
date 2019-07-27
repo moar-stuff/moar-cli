@@ -1,3 +1,5 @@
+import * as fs from 'fs';
+
 import { default as chalk, Chalk } from 'chalk';
 import * as simpleGit from 'simple-git/promise';
 import { Theme } from './Theme';
@@ -10,7 +12,14 @@ import child_process from 'child_process';
 import util from 'util';
 const exec = util.promisify(child_process.exec);
 
-export class ModuleDir {
+export class PackageDir {
+
+  static isPackage(packageDir: string) {
+    const gitExists = fs.existsSync(packageDir + '/.git/config');
+    const packageExists = fs.existsSync(packageDir + '/package.json');
+    return gitExists && packageExists;
+  }
+
   static domain?: string;
   uncommited = 0;
   ahead = 0;
@@ -42,8 +51,8 @@ export class ModuleDir {
     tag: string;
     good?: boolean;
   } = {
-    tag: ''
-  };
+      tag: ''
+    };
   dir: string;
   workspaceDir: string;
   noMerged: {
@@ -58,13 +67,13 @@ export class ModuleDir {
   }[] = [];
 
   constructor(
-    private workspaceModuleDir: string,
+    private workPackageDir: string,
     public name: string,
-    readonly gitModule: simpleGit.SimpleGit,
+    readonly git: simpleGit.SimpleGit,
     readonly theme: Theme,
     private context: CommandLineOptions
   ) {
-    this.workspaceDir = ModuleDir.dropLastPathPart(this.workspaceModuleDir);
+    this.workspaceDir = PackageDir.dropLastPathPart(this.workPackageDir);
     const workspaceName = this.workspaceDir.substring(
       this.workspaceDir.lastIndexOf('/') + 1
     );
@@ -76,11 +85,11 @@ export class ModuleDir {
   }
 
   /**
-   * Prepare the module
+   * Prepare the package
    */
   async prepare(fullStatus: boolean) {
     try {
-      this.gitModule.silent(true);
+      this.git.silent(true);
       await this.init();
       await this.prepareStatus();
       await this.prepareTracking();
@@ -122,7 +131,7 @@ export class ModuleDir {
   }
 
   private async prepareNoMerged() {
-    const branchSummary = await this.gitModule.branch(['-a', '--no-merged']);
+    const branchSummary = await this.git.branch(['-a', '--no-merged']);
     let count = 0;
     const suppressRx = new RegExp(this.context.suppress);
     const showRx =
@@ -135,7 +144,7 @@ export class ModuleDir {
         : new RegExp(this.context.hide);
     for (const branch of branchSummary.all) {
       if (branch.startsWith('remotes/origin/')) {
-        const shortName = ModuleDir.simplifyRefName(branch);
+        const shortName = PackageDir.simplifyRefName(branch);
         const date = await this.getDate(branch);
         const raw = `BRANCH: ${date}, ${shortName}`;
         let rule = 'show';
@@ -199,7 +208,7 @@ export class ModuleDir {
   }
 
   private async getDate(id: string): Promise<string> {
-    let result = await this.gitModule.show([id, '--date=iso', '--name-only']);
+    let result = await this.git.show([id, '--date=iso', '--name-only']);
     const lines = result.split('\n');
     for (const line of lines) {
       if (line.startsWith('Date: ')) {
@@ -217,7 +226,7 @@ export class ModuleDir {
 
   private async prepareDescribe() {
     try {
-      const describe = await this.gitModule.raw(['describe', '--exact-match']);
+      const describe = await this.git.raw(['describe', '--exact-match']);
       if (describe.length > 0) {
         this.tagVerify.tag = describe.trim();
         if (this.context.verify === '1') {
@@ -242,41 +251,41 @@ export class ModuleDir {
 
   private async prepareDevelopToTracking() {
     try {
-      const developToTracking = await this.gitModule.log({
+      const developToTracking = await this.git.log({
         symmetric: false,
         from: 'origin/develop',
         to: this.tracking ? this.tracking : 'HEAD'
       });
       this.developToTracking = developToTracking ? developToTracking.total : 0;
-    } catch (e) {}
+    } catch (e) { }
   }
 
   private async prepareDevelopToMaster() {
     try {
-      const developToMaster = await this.gitModule.log({
+      const developToMaster = await this.git.log({
         symmetric: false,
         from: 'origin/develop',
         to: 'origin/master'
       });
       this.developToMaster = developToMaster ? developToMaster.total : 0;
-    } catch (e) {}
+    } catch (e) { }
   }
 
   private async prepareMasterToDevelop() {
     try {
-      const masterToDevelop = await this.gitModule.log({
+      const masterToDevelop = await this.git.log({
         symmetric: false,
         from: 'origin/master',
         to: 'origin/develop'
       });
       this.masterToDevelop = masterToDevelop ? masterToDevelop.total : 0;
-    } catch (e) {}
+    } catch (e) { }
   }
 
   private async prepareTracking() {
     this.tracking = this.status ? this.status.tracking : undefined;
     try {
-      const trackingToDevelop = await this.gitModule.log({
+      const trackingToDevelop = await this.git.log({
         symmetric: false,
         from: this.tracking ? this.tracking : 'HEAD',
         to: 'origin/develop'
@@ -294,7 +303,7 @@ export class ModuleDir {
     if (trackingLabel === this.current) {
       trackingLabel = '';
     }
-    trackingLabel = ModuleDir.simplifyRefName(trackingLabel);
+    trackingLabel = PackageDir.simplifyRefName(trackingLabel);
     this.trackingLabel = trackingLabel;
   }
 
@@ -312,20 +321,20 @@ export class ModuleDir {
 
   private async prepareStatus() {
     try {
-      this.status = await this.gitModule.status();
+      this.status = await this.git.status();
       this.current = this.status.current.replace(/.*\//, '');
-    } catch (e) {}
+    } catch (e) { }
   }
 
   private async init() {
-    if (ModuleDir.domain == undefined) {
+    if (PackageDir.domain == undefined) {
       try {
-        const result = await this.gitModule.raw(['config', 'user.email']);
-        ModuleDir.domain = result
+        const result = await this.git.raw(['config', 'user.email']);
+        PackageDir.domain = result
           .replace(/.*\@/, '')
           .trim()
           .toLowerCase();
-      } catch (e) {}
+      } catch (e) { }
     }
   }
 
@@ -342,11 +351,11 @@ export class ModuleDir {
           .replace(/.*</, '')
           .replace(/>.*/, '')
           .toLowerCase();
-        if (ModuleDir.domain) {
-          if (author.toLowerCase().endsWith(ModuleDir.domain)) {
+        if (PackageDir.domain) {
+          if (author.toLowerCase().endsWith(PackageDir.domain)) {
             author = author.substring(
               0,
-              author.length - ModuleDir.domain.length - 1
+              author.length - PackageDir.domain.length - 1
             );
           }
         }
@@ -420,9 +429,9 @@ export class ModuleDir {
       if (this.context.verify === '1') {
         options.push('--show-signature');
       }
-      const result = await this.gitModule.show(options);
+      const result = await this.git.show(options);
       return this.checkSign(result);
-    } catch {}
+    } catch { }
     return { good: undefined, result: undefined };
   }
 
@@ -442,18 +451,18 @@ export class ModuleDir {
   }
 
   /**
-   * Get the full status for the module
+   * Get the label used for the **Not Merged** command
    */
-  getFullStatus(config?: IndicatorConfig) {
+  getNotMergedLabel(config?: IndicatorConfig) {
     const buffer: string[] = [
       '┏━> ' +
-        this.getStatusLabel({
-          trackingPushArrowSize: 1,
-          developPushArrowSize: 1,
-          masterPushArrowSize: 1,
-          unmergedPushArrowSize: 0,
-          config
-        })
+      this.getStatusLabel({
+        trackingPushArrowSize: 1,
+        developPushArrowSize: 1,
+        masterPushArrowSize: 1,
+        unmergedPushArrowSize: 0,
+        config
+      })
     ];
     const last = this.noMerged.length - 1;
     const maxNumLen = `${last}`.length;
@@ -474,8 +483,8 @@ export class ModuleDir {
       const numBars = '━'.repeat(maxNumLen - num.length);
       line.push(
         (i === last ? '┗━' : '┣━') +
-          numBars +
-          ` ${this.theme.unmergedChalk(num)} ${shortName} ━`
+        numBars +
+        ` ${this.theme.unmergedChalk(num)} ${shortName} ━`
       );
       const indicator = new Indicator(config);
       indicator.pushText('━'.repeat(maxShortNameLen - shortName.length));
@@ -513,7 +522,7 @@ export class ModuleDir {
 
     if (config) {
       textualChalk =
-        this.workspaceModuleDir === this.dir ? chalk.bold : chalk.reset;
+        this.workPackageDir === this.dir ? chalk.bold : chalk.reset;
     }
 
     trackingPushArrowSize = trackingPushArrowSize || 1;
@@ -543,12 +552,12 @@ export class ModuleDir {
       indicator.pushText(' 💥ERROR', chalk.redBright);
     } else {
       const signChalk = this.theme.signChalk;
-      if(this.tagVerify.good === true) {
-        indicator.pushText(`●<${ModuleDir.simplifyRefName(this.tagVerify.tag)}>`, signChalk);
-      } else if(this.tagVerify.good === false) {
-        indicator.pushText(`○<${ModuleDir.simplifyRefName(this.tagVerify.tag)}>`, signChalk);
-      } else if(this.tagVerify.tag.length > 0) {
-        indicator.pushText(`◌<${ModuleDir.simplifyRefName(this.tagVerify.tag)}>`);
+      if (this.tagVerify.good === true) {
+        indicator.pushText(`●<${PackageDir.simplifyRefName(this.tagVerify.tag)}>`, signChalk);
+      } else if (this.tagVerify.good === false) {
+        indicator.pushText(`○<${PackageDir.simplifyRefName(this.tagVerify.tag)}>`, signChalk);
+      } else if (this.tagVerify.tag.length > 0) {
+        indicator.pushText(`◌<${PackageDir.simplifyRefName(this.tagVerify.tag)}>`);
       }
       indicator.pushText(' ');
       indicator.pushText(this.headRelativeArea);
@@ -600,7 +609,7 @@ export class ModuleDir {
   pushCurrentArea(indicator: Indicator, textualChalk?: Chalk) {
     return indicator
       .pushText(this.sign(this.goodHead), this.theme.signChalk)
-      .pushText(ModuleDir.simplifyRefName(this.current), textualChalk)
+      .pushText(PackageDir.simplifyRefName(this.current), textualChalk)
       .push('▲', this.ahead, this.theme.aheadChalk)
       .push('▼', this.behind, this.theme.behindChalk);
   }

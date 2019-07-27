@@ -3,12 +3,12 @@ import * as simpleGit from 'simple-git/promise';
 
 import { Theme } from './Theme';
 import { Command } from './Command';
-import { ModuleDir } from './ModuleDir';
+import { PackageDir } from './PackageDir';
 import { Indicator } from './Indicator';
 import { CommandLineOptions } from 'command-line-args';
 
 /**
- * A command to show a description for the module directory.
+ * Show a description for the package
  */
 export class DescribeCommand extends Command {
   constructor(commandContext: CommandLineOptions, theme: Theme) {
@@ -16,96 +16,96 @@ export class DescribeCommand extends Command {
   }
 
   async run(errors: string[]) {
-    this.checkModuleDir(errors);
+    this.checkPackageDir(errors);
     if (errors.length > 0) {
       return;
     }
 
-    const gitModule = simpleGit.default(this.moduleDir);
-    const dir = this.moduleDir.substring(this.moduleDir.lastIndexOf('/') + 1);
-    const moduleDir = new ModuleDir(
-      this.moduleDir,
+    const git = simpleGit.default(this.packageDir);
+    const dir = this.packageDir.substring(this.packageDir.lastIndexOf('/') + 1);
+    const packageDir = new PackageDir(
+      this.packageDir,
       dir,
-      gitModule,
+      git,
       this.theme,
       this.context
     );
-    await moduleDir.prepare(true);
+    await packageDir.prepare(true);
     const config = { color: true };
     console.log(
       chalk.bold(
-        `Module Status (HEAD): ${
-          moduleDir.pushCurrentArea(new Indicator({ color: true })).content
+        `Status (HEAD): ${
+          packageDir.pushCurrentArea(new Indicator({ color: true })).content
         }`
       )
     );
-    if (moduleDir.tagVerify.tag.length > 0) {
+    if (packageDir.tagVerify.tag.length > 0) {
       this.showSignatureLine(
-        `${chalk.bold(moduleDir.tagVerify.tag)} tag`,
-        moduleDir.tagVerify.good
+        `${chalk.bold(packageDir.tagVerify.tag)} tag`,
+        packageDir.tagVerify.good
       );
     }
-    this.showSignatureLine('latest commit', moduleDir.goodHead);
-    console.log(`  * ${moduleDir.headRelativeArea}`);
-    if (moduleDir.uncommited > 0) {
+    this.showSignatureLine('latest commit', packageDir.goodHead);
+    console.log(`  * ${packageDir.headRelativeArea}`);
+    if (packageDir.uncommited > 0) {
       console.log(
-        `  * ${this.theme.uncommitedChalk('' + moduleDir.uncommited)} file ${
-          moduleDir.uncommited === 1 ? 'change' : 'changes'
+        `  * ${this.theme.uncommitedChalk('' + packageDir.uncommited)} file ${
+          packageDir.uncommited === 1 ? 'change' : 'changes'
         }`
       );
     }
     this.showAheadBehind({
-      ahead: moduleDir.ahead,
-      behind: moduleDir.behind,
-      trackingLabel: moduleDir.trackingLabel
+      ahead: packageDir.ahead,
+      behind: packageDir.behind,
+      trackingLabel: packageDir.trackingLabel
     });
-    if (moduleDir.trackingLabel !== '') {
+    if (packageDir.trackingLabel !== '') {
       console.log(
         chalk.bold(
           `Tracking Status.....: ${
-            moduleDir.pushTrackingArea(new Indicator(config)).content
+            packageDir.pushTrackingArea(new Indicator(config)).content
           }`
         )
       );
-      this.showSignatureLine('latest commit', moduleDir.goodTracking);
-      console.log(`  * ${moduleDir.trackingRelativeArea}`);
+      this.showSignatureLine('latest commit', packageDir.goodTracking);
+      console.log(`  * ${packageDir.trackingRelativeArea}`);
       this.showAheadBehind({
-        ahead: moduleDir.developToTracking,
-        behind: moduleDir.trackingToDevelop,
+        ahead: packageDir.developToTracking,
+        behind: packageDir.trackingToDevelop,
         trackingLabel: 'develop'
       });
     }
     console.log(
       chalk.bold(
         `Develop Status......: ${
-          moduleDir.pushDevelopArea(new Indicator(config)).content
+          packageDir.pushDevelopArea(new Indicator(config)).content
         }`
       )
     );
-    this.showSignatureLine('latest commit', moduleDir.goodDevelop);
-    console.log(`  * ${moduleDir.developRelativeArea}`);
+    this.showSignatureLine('latest commit', packageDir.goodDevelop);
+    console.log(`  * ${packageDir.developRelativeArea}`);
     this.showAheadBehind({
-      ahead: moduleDir.masterToDevelop,
-      behind: moduleDir.developToMaster,
+      ahead: packageDir.masterToDevelop,
+      behind: packageDir.developToMaster,
       trackingLabel: 'master'
     });
     console.log(
       chalk.bold(
         `Master Status.......: ${
-          moduleDir.pushMasterArea(new Indicator(config)).content
+          packageDir.pushMasterArea(new Indicator(config)).content
         }`
       )
     );
-    this.showSignatureLine('latest commit', moduleDir.goodMaster);
-    console.log(`  * ${moduleDir.masterRelativeArea}`);
+    this.showSignatureLine('latest commit', packageDir.goodMaster);
+    console.log(`  * ${packageDir.masterRelativeArea}`);
     this.showAheadBehind({
       behind: 0, // Master is **never** behind anything
-      ahead: moduleDir.developToMaster,
+      ahead: packageDir.developToMaster,
       trackingLabel: 'master'
     });
     console.log(
       chalk.bold(
-        `Unmerged Branches...: ${moduleDir
+        `Unmerged Branches...: ${packageDir
           .pushUnmergedArea(new Indicator(config))
           .content.trim()}`
       )

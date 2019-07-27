@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import { StatusCommand } from './StatusCommand';
 import { DescribeCommand } from './DescribeCommand';
 
-import * as modulePackage from './package.json';
+import * as packageJson from './package.json';
 import { EachCommand } from './EachCommand';
 
 import commandLineArgs from 'command-line-args';
@@ -62,11 +62,11 @@ const commands: OptionDefinition[] = [
   { name: 'help' }
 ];
 describe(commands, {
-  tag: ['Tag all modules'],
-  describe: ['Describe the current module'],
-  each: ['Build a script to run a command in all module directories'],
+  tag: ['Tag'],
+  describe: ['Describe'],
+  each: ['Build a script to run a command in all package directories'],
   branch: ['Show branches not yet merged'],
-  status: ['Show status for all modules'],
+  status: ['Show status'],
   help: ['Display help']
 });
 
@@ -131,7 +131,7 @@ function showHelp() {
   const sections = [
     {
       header: 'Moar CLI',
-      content: 'A tool for managing more then one GIT module.'
+      content: 'A tool for managing packages'
     },
     {
       content: 'moar <command> <options>'
@@ -176,11 +176,11 @@ async function run() {
 
   const errors: string[] = [];
 
-  if (!process.env.MOAR_MODULE_DIR) {
-    errors.push('MOAR_MODULE_DIR must be defined');
+  if (!process.env.MOAR_PACKAGE_DIR) {
+    errors.push('MOAR_PACKAGE_DIR must be defined');
   } else {
     if (context.version !== undefined || context['--version'] !== undefined) {
-      console.log(modulePackage.version);
+      console.log(packageJson.version);
       return;
     }
     if (command.help) {

@@ -1,32 +1,30 @@
 import * as fs from 'fs';
 
 import { Theme } from './Theme';
-import { ModuleDir } from './ModuleDir';
+import { PackageDir } from './PackageDir';
 import { CommandLineOptions } from 'command-line-args';
 
 export class Command {
-  protected moduleDirs: ModuleDir[] = [];
-  protected moduleDir: string = <string>process.env.MOAR_MODULE_DIR;
+  protected packageDirs: PackageDir[] = [];
+  protected packageDir: string = <string>process.env.MOAR_PACKAGE_DIR;
   protected workspaceDir: string;
   protected workspaceDirs: string[];
 
   constructor(protected context: CommandLineOptions, protected theme: Theme) {
-    this.workspaceDir = this.moduleDir.substring(
-      0,
-      this.moduleDir.lastIndexOf('/')
-    );
+    const pos = this.packageDir.lastIndexOf('/');
+    this.workspaceDir = this.packageDir.substring(0, pos);
     this.workspaceDirs = fs.readdirSync(this.workspaceDir);
   }
 
   run(errors: string[]) {
-    errors.push('RUN NOT IMPLEMENTED');
+    throw new Error('not implemented')
   }
 
-  protected checkModuleDir(errors: string[]) {
-    const path = this.moduleDir + '/.git/config';
-    const exists = fs.existsSync(path);
-    if (!exists) {
-      errors.push('Status command must be run from a git module root');
+  protected checkPackageDir(errors: string[]) {
+    const isPackageDir = PackageDir.isPackage(this.packageDir);
+    if (!isPackageDir) {
+      errors.push('Status must be run from a git directory with package.json in the root');
     }
   }
+
 }

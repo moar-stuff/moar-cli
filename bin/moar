@@ -3,5 +3,5 @@ workDir=`pwd`
 binDir="$( cd "$(dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd $binDir
 cd ../lib/node_modules/moar-cli
-export MOAR_MODULE_DIR="$workDir"
+export MOAR_PACKAGE_DIR="$workDir"
 node moar-cli.js "$@"

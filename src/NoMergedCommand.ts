@@ -3,11 +3,11 @@ import * as simpleGit from 'simple-git/promise';
 
 import { Theme } from './Theme';
 import { Command } from './Command';
-import { ModuleDir } from './ModuleDir';
+import { PackageDir } from './PackageDir';
 import { CommandLineOptions } from 'command-line-args';
 
 /**
- * A command to show a description for the module directory.
+ * Show branches that have not been merged
  */
 export class NotMergedCommand extends Command {
   constructor(commandContext: CommandLineOptions, theme: Theme) {
@@ -15,21 +15,21 @@ export class NotMergedCommand extends Command {
   }
 
   async run(errors: string[]) {
-    this.checkModuleDir(errors);
+    this.checkPackageDir(errors);
     if (errors.length > 0) {
       return;
     }
 
-    const gitModule = simpleGit.default(this.moduleDir);
-    const dir = this.moduleDir.substring(this.moduleDir.lastIndexOf('/') + 1);
-    const moduleDir = new ModuleDir(
-      this.moduleDir,
+    const git = simpleGit.default(this.packageDir);
+    const dir = this.packageDir.substring(this.packageDir.lastIndexOf('/') + 1);
+    const packageDir = new PackageDir(
+      this.packageDir,
       dir,
-      gitModule,
+      git,
       this.theme,
       this.context
     );
-    await moduleDir.prepare(true);
-    console.log(moduleDir.getFullStatus({ color: true }));
+    await packageDir.prepare(true);
+    console.log(packageDir.getNotMergedLabel({ color: true }));
   }
 }

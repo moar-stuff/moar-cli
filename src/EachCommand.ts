@@ -2,9 +2,10 @@ import * as fs from 'fs';
 import { Theme } from './Theme';
 import { Command } from './Command';
 import { CommandLineOptions } from 'command-line-args';
+import { PackageDir } from './PackageDir';
 
 /**
- * A command to show a description for the module directory.
+ * Build a script to run a command in all package dirs
  */
 export class EachCommand extends Command {
   constructor(commandContext: CommandLineOptions, theme: Theme) {
@@ -15,7 +16,7 @@ export class EachCommand extends Command {
    * Displays the Status for the Workspace
    */
   async run(errors: string[]): Promise<void> {
-    this.checkModuleDir(errors);
+    this.checkPackageDir(errors);
     if (errors.length > 0) {
       return;
     }
@@ -34,27 +35,24 @@ export class EachCommand extends Command {
     }
 
     let buffer = '';
-    for (const workspaceModuleDir of this.workspaceDirs) {
-      if (
-        fs.existsSync(
-          this.workspaceDir + '/' + workspaceModuleDir + '/.git/config'
-        )
-      ) {
-        buffer += `cd ../${workspaceModuleDir} && \\\n`;
+    for (const workPackageDir of this.workspaceDirs) {
+      const isPackage = PackageDir.isPackage(this.workspaceDir + '/' + workPackageDir);
+      if (isPackage) {
+        buffer += `cd ../${workPackageDir} && \\\n`;
         const quietLevel = this.context['quiet-level'];
         if(quietLevel === '0') {
-          buffer += `echo "# * ${workspaceModuleDir} ${'*'.repeat(60 - workspaceModuleDir.length)}" && \\\n`;
+          buffer += `echo "# * ${workPackageDir} ${'*'.repeat(60 - workPackageDir.length)}" && \\\n`;
           buffer += `(${command}) && \\\n`;
         } else if(quietLevel === '1') {
-          buffer += `echo "${workspaceModuleDir} $(${command}) " && \\\n`;
+          buffer += `echo "${workPackageDir} $(${command}) " && \\\n`;
         }
         if(quietLevel === '2') {
-          buffer += `echo "$(${command}) ${workspaceModuleDir} " && \\\n`;
+          buffer += `echo "$(${command}) ${workPackageDir} " && \\\n`;
         }
       }
     }
-    const bareModuleDir = this.moduleDir.replace(/.*\//, '');
-    buffer += `cd ../${bareModuleDir} \n`;
+    const barePackageDir = this.packageDir.replace(/.*\//, '');
+    buffer += `cd ../${barePackageDir} \n`;
     console.log(buffer);
   }
 }

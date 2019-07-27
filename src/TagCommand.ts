@@ -1,6 +1,5 @@
 import * as simpleGit from 'simple-git/promise';
 
-import * as fs from 'fs';
 import { Theme } from './Theme';
 import { Command } from './Command';
 import { CommandLineOptions } from 'command-line-args';
@@ -10,7 +9,7 @@ import util from 'util';
 const exec = util.promisify(child_process.exec);
 
 /**
- * A command to show a description for the module directory.
+ * Tag the package
  */
 export class TagCommand extends Command {
   constructor(commandContext: CommandLineOptions, theme: Theme) {
@@ -21,7 +20,7 @@ export class TagCommand extends Command {
    * Displays the Status for the Workspace
    */
   async run(errors: string[]): Promise<void> {
-    this.checkModuleDir(errors);
+    this.checkPackageDir(errors);
     if (errors.length > 0) {
       return;
     }
@@ -32,22 +31,22 @@ export class TagCommand extends Command {
     message += `\n${'-'.repeat(40)}\n`;
     let cmd = 'echo "$(git rev-parse HEAD) ${PWD##*/}"';
     cmd = `moar e '${cmd}' | sh | grep -v '# *'`;
-    const result = await exec(cmd, { cwd: this.moduleDir });
+    const result = await exec(cmd, { cwd: this.packageDir });
     const lines = result.stdout.split('\n');
     for (const line of lines) {
       message += line + '\n';
     }
 
     try {
-      const gitModule = simpleGit.default(
-        this.moduleDir
+      const git = simpleGit.default(
+        this.packageDir
       );
-      gitModule.silent(true);
-      await gitModule.tag(['-s', '-m', message, tag]);
-      await gitModule.raw(['push', 'origin', tag])
-      console.error(`${this.moduleDir} - created tag`);
+      git.silent(true);
+      await git.tag(['-s', '-m', message, tag]);
+      await git.raw(['push', 'origin', tag])
+      console.error(`${this.packageDir} - created tag`);
     } catch (e) {
-      console.error(`💥ERROR: ${this.moduleDir} - unable to tag`);
+      console.error(`💥ERROR: ${this.packageDir} - unable to tag`);
       process.exit(1);
     }
   }
