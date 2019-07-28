@@ -1,4 +1,3 @@
-import * as fs from 'fs';
 import { Theme } from './Theme';
 import { Command } from './Command';
 import { CommandLineOptions } from 'command-line-args';

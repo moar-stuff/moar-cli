@@ -9,7 +9,7 @@ import { CommandLineOptions } from 'command-line-args';
 /**
  * Show branches that have not been merged
  */
-export class NotMergedCommand extends Command {
+export class BranchCommand extends Command {
   constructor(commandContext: CommandLineOptions, theme: Theme) {
     super(commandContext, theme);
   }

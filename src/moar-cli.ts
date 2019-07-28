@@ -7,10 +7,15 @@ import { EachCommand } from './EachCommand';
 
 import commandLineArgs from 'command-line-args';
 import commandLineUsage, { OptionDefinition } from 'command-line-usage';
-import { NotMergedCommand } from './NoMergedCommand';
+import { BranchCommand } from './BranchCommand';
 import { TagCommand } from './TagCommand';
+import { AtCommand } from './AtCommand';
 
 const aliases: any = {
+  '--version': 'version',
+  '-r': 'raw',
+  '-v': 'version',
+  a: 'at',
   b: 'branch',
   d: 'describe',
   e: 'each',
@@ -23,59 +28,56 @@ const aliases: any = {
   s: 'status',
   t: 'tag',
   u: 'suppress',
+  v: 'version',
   w: 'show',
   y: 'verify',
-  v: 'version',
-  '-r': 'raw',
-  '-v': 'version',
-  '--version': 'version'
 };
 
 const options: OptionDefinition[] = [
-  { name: 'quiet-level', defaultValue: '0' },
-  { name: 'suppress', defaultValue: '$^' },
-  { name: 'show', defaultValue: '<null>' },
   { name: 'hide', defaultValue: '<null>' },
-  { name: 'raw', defaultValue: '0' },
-  { name: 'verify', defaultValue: '0' },
   { name: 'origin', defaultValue: 'origin' },
-  { name: 'tag-message', defaultValue: 'tagged' }
+  { name: 'quiet-level', defaultValue: '0' },
+  { name: 'raw', defaultValue: '0' },
+  { name: 'show', defaultValue: '<null>' },
+  { name: 'suppress', defaultValue: '$^' },
+  { name: 'tag-message', defaultValue: 'tagged' },
+  { name: 'verify', defaultValue: '0' },
 ];
 describe(options, {
+  hide: ['<null> | <RegEx>', 'Hide using the supplied filter criteria'], 'quiet-level': ['0 | 1 | 2', 'Quiet level'],
   origin: ['<string>', 'Name of the remote to consider origin'],
-  suppress: ['<null> | <RegEx>', 'Suppress using the supplied filter criteria'],
+  raw: ['0 | 1', 'Show raw output'], 'tag-message': ['<string>', 'Base message for tagging'],
   show: ['<null> | <RegEx>', 'Show using the supplied filter criteria'],
-  hide: ['<null> | <RegEx>', 'Hide using the supplied filter criteria'],
-  'quiet-level': ['0 | 1 | 2', 'Quiet level'],
+  suppress: ['<null> | <RegEx>', 'Suppress using the supplied filter criteria'],
   verify: ['0 | 1', 'Verify signatures'],
-  raw: ['0 | 1', 'Show raw output'],
-  'tag-message': ['<string>', 'Base message for tagging']
 });
 
 const commands: OptionDefinition[] = [
-  { name: 'version' },
-  { name: 'tag' },
+  { name: 'at' },
+  { name: 'branch' },
   { name: 'describe' },
   { name: 'each' },
-  { name: 'branch' },
+  { name: 'help' },
   { name: 'status' },
-  { name: 'help' }
+  { name: 'tag' },
+  { name: 'version' },
 ];
 describe(commands, {
-  tag: ['Tag'],
+  at: ['Display the package version'],
+  branch: ['Show branches not yet merged'],
   describe: ['Describe'],
   each: ['Build a script to run a command in all package directories'],
-  branch: ['Show branches not yet merged'],
+  help: ['Display help'],
   status: ['Show status'],
-  help: ['Display help']
+  tag: ['Tag'],
 });
 
 run();
 
 function findAlias(name: string) {
   const keys = Object.keys(aliases);
-  for(const key of keys) {
-    if(aliases[key] === name && key.length === 1) {
+  for (const key of keys) {
+    if (aliases[key] === name && key.length === 1) {
       return key;
     }
   }
@@ -117,17 +119,23 @@ function setColumnOrder() {
 
 function showHelp() {
   setColumnOrder();
+
   for (const command of commands) {
     if (command.name === 'tag') {
-      command.name = command.name + ' <tagname> -m <msg>';
+      command.name = command.name + ' -m <msg> <tagname>';
+    }
+    if (command.name === 'version') {
+      // the version _command_ is traditionally '-v', '--version'
+      command.alias = '-' + command.alias;
+      command.name = '--' + command.name;
     }
   }
+
   for (const option of options) {
     option.name = '--' + option.name;
     option.alias = '-' + option.alias;
   }
-  commands[0].alias = '-' + commands[0].alias;
-  commands[0].name = '--' + commands[0].name;
+
   const sections = [
     {
       header: 'Moar CLI',
@@ -199,9 +207,11 @@ async function run() {
     } else if (command.each) {
       await new EachCommand(context, theme).run(errors);
     } else if (command.branch) {
-      await new NotMergedCommand(context, theme).run(errors);
+      await new BranchCommand(context, theme).run(errors);
     } else if (command.tag) {
       await new TagCommand(context, theme).run(errors);
+    } else if (command.at) {
+      await new AtCommand(context, theme).run(errors);
     } else {
       errors.push(`Invalid Command: ${Object.keys(command)[0]}`);
     }

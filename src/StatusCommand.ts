@@ -50,7 +50,6 @@ export class StatusCommand extends Command {
         } else {
           return a.headDate > b.headDate ? 1 : -1;
         }
-        return 0;
       }
       return a.tagVerify.tag > b.tagVerify.tag ? 1 : -1;
     });

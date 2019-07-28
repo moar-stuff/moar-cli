@@ -33,7 +33,7 @@ export class TagCommand extends Command {
     tag += packageVersion;
     let message = this.context['tag-message'];
     message += `\n${'-'.repeat(40)}\n`;
-    let cmd = 'echo "$(git rev-parse HEAD) ${PWD##*/}"';
+    let cmd = 'echo "$(git rev-parse HEAD) ${PWD##*/}\@$(moar at)"';
     cmd = `moar e '${cmd}' | sh | grep -v '# *'`;
     const result = await exec(cmd, { cwd: this.packageDir });
     const lines = result.stdout.split('\n');
@@ -50,7 +50,7 @@ export class TagCommand extends Command {
       await git.raw(['push', `${this.context.origin}`, tag])
       console.error(`${this.packageDir} - created tag`);
     } catch (e) {
-      console.error(`💥ERROR: ${this.packageDir} - unable to tag`);
+      console.error(`💥ERROR: ${this.packageDir} - unable to tag ${e.message}`);
       process.exit(1);
     }
   }
