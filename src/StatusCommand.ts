@@ -1,5 +1,3 @@
-import * as fs from 'fs';
-import * as simpleGit from 'simple-git/promise';
 import { PackageDir } from './PackageDir';
 import { Theme } from './Theme';
 import { Command } from './Command';
@@ -32,18 +30,11 @@ export class StatusCommand extends Command {
     }
 
     for (const workDir of this.workspaceDirs) {
-      if (
-        fs.existsSync(
-          this.workspaceDir + '/' + workDir + '/.git/config'
-        )
-      ) {
-        const git = simpleGit.default(
-          this.workspaceDir + '/' + workDir
-        );
+      const isPackage = PackageDir.isPackage(this.workspaceDir + '/' + workDir);
+    if (isPackage) {
         const packageDir = new PackageDir(
           this.packageDir,
           workDir,
-          git,
           this.theme,
           this.context
         );
@@ -53,22 +44,15 @@ export class StatusCommand extends Command {
     }
 
     this.packageDirs.sort((a, b) => {
-      let sortA = '';
-      let sortB = '';
-      if(this.context.sort === 't')  {
-        this.context.sort = 'tag';
-      }
-      if (this.context.sort === 'tag') {
-        sortA = a.tagVerify.tag;
-        sortB = b.tagVerify.tag;
-      } else {
-        sortA = a.headDate;
-        sortB = b.headDate;
-      }
-      if (sortA === sortB) {
+      if (a.tagVerify.tag === b.tagVerify.tag) {
+        if (a.headDate === b.headDate) {
+          return 0;
+        } else {
+          return a.headDate > b.headDate ? 1 : -1;
+        }
         return 0;
       }
-      return sortA > sortB ? 1 : -1;
+      return a.tagVerify.tag > b.tagVerify.tag ? 1 : -1;
     });
 
     let maxNameLen = this.maxLen('nameAreaLen');
@@ -93,11 +77,12 @@ export class StatusCommand extends Command {
       const unmergedPushLineSize =
         1 + (maxMasterLen - masterLen) + (maxUnmergedLen - unmergedLen);
       const label = memberDir.getStatusLabel({
+        highlightCurrent: true,
         nameArrowSize,
         trackingPushArrowSize,
         developPushArrowSize,
         masterPushArrowSize,
-        unmergedPushArrowSize: unmergedPushLineSize,
+        unmergedPushLineSize,
         config: labelConfig
       });
       console.log(label);

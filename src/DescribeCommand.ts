@@ -21,12 +21,10 @@ export class DescribeCommand extends Command {
       return;
     }
 
-    const git = simpleGit.default(this.packageDir);
     const dir = this.packageDir.substring(this.packageDir.lastIndexOf('/') + 1);
     const packageDir = new PackageDir(
       this.packageDir,
       dir,
-      git,
       this.theme,
       this.context
     );

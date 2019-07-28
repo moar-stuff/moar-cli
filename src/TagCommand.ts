@@ -47,7 +47,7 @@ export class TagCommand extends Command {
       );
       git.silent(true);
       await git.tag(['-s', '-m', message, tag]);
-      await git.raw(['push', 'origin', tag])
+      await git.raw(['push', `${this.context.origin}`, tag])
       console.error(`${this.packageDir} - created tag`);
     } catch (e) {
       console.error(`💥ERROR: ${this.packageDir} - unable to tag`);

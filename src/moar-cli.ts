@@ -17,7 +17,7 @@ const aliases: any = {
   h: 'help',
   i: 'hide',
   m: 'tag-message',
-  o: 'sort',
+  o: 'origin',
   q: 'quiet-level',
   r: 'raw',
   s: 'status',
@@ -38,11 +38,11 @@ const options: OptionDefinition[] = [
   { name: 'hide', defaultValue: '<null>' },
   { name: 'raw', defaultValue: '0' },
   { name: 'verify', defaultValue: '0' },
-  { name: 'sort', defaultValue: 'time' },
+  { name: 'origin', defaultValue: 'origin' },
   { name: 'tag-message', defaultValue: 'tagged' }
 ];
 describe(options, {
-  sort: ['time | tag', 'Sort'],
+  origin: ['<string>', 'Name of the remote to consider origin'],
   suppress: ['<null> | <RegEx>', 'Suppress using the supplied filter criteria'],
   show: ['<null> | <RegEx>', 'Show using the supplied filter criteria'],
   hide: ['<null> | <RegEx>', 'Hide using the supplied filter criteria'],

@@ -13,6 +13,8 @@ import util from 'util';
 const exec = util.promisify(child_process.exec);
 
 export class PackageDir {
+  version: string;
+  git: simpleGit.SimpleGit;
 
   static isPackage(packageDir: string) {
     const gitExists = fs.existsSync(packageDir + '/.git/config');
@@ -20,7 +22,7 @@ export class PackageDir {
     return gitExists && packageExists;
   }
 
-  static domain?: string;
+  static defaultDomain?: string;
   uncommited = 0;
   ahead = 0;
   behind = 0;
@@ -69,15 +71,14 @@ export class PackageDir {
   constructor(
     private workPackageDir: string,
     public name: string,
-    readonly git: simpleGit.SimpleGit,
     readonly theme: Theme,
     private context: CommandLineOptions
   ) {
     this.workspaceDir = PackageDir.dropLastPathPart(this.workPackageDir);
-    const workspaceName = this.workspaceDir.substring(
-      this.workspaceDir.lastIndexOf('/') + 1
-    );
     this.dir = this.workspaceDir + '/' + name;
+    const packageJson = fs.readFileSync(this.dir + '/package.json')
+    this.version = JSON.parse(packageJson.toString()).version;
+    this.git = simpleGit.default(this.dir);
   }
 
   private static dropLastPathPart(workspaceDir: string) {
@@ -143,7 +144,7 @@ export class PackageDir {
         ? undefined
         : new RegExp(this.context.hide);
     for (const branch of branchSummary.all) {
-      if (branch.startsWith('remotes/origin/')) {
+      if (branch.startsWith(`remotes/${this.context.origin}/`)) {
         const shortName = PackageDir.simplifyRefName(branch);
         const date = await this.getDate(branch);
         const raw = `BRANCH: ${date}, ${shortName}`;
@@ -179,7 +180,7 @@ export class PackageDir {
   }
 
   private async prepareMaster() {
-    const masterShowRelative = await this.showRelative('origin/master');
+    const masterShowRelative = await this.showRelative(`${this.context.origin}/master`);
     const masterRelative = this.parseAuthorAndRelative(masterShowRelative);
     this.masterAuthor = masterRelative.author;
     this.masterRelative = masterRelative.relative;
@@ -187,7 +188,7 @@ export class PackageDir {
   }
 
   private async prepareDevelop() {
-    const developShowRelative = await this.showRelative('origin/develop');
+    const developShowRelative = await this.showRelative(`${this.context.origin}/develop`);
     const developRelative = this.parseAuthorAndRelative(developShowRelative);
     this.developAuthor = developRelative.author;
     this.developRelative = developRelative.relative;
@@ -253,7 +254,7 @@ export class PackageDir {
     try {
       const developToTracking = await this.git.log({
         symmetric: false,
-        from: 'origin/develop',
+        from: `${this.context.origin}/develop`,
         to: this.tracking ? this.tracking : 'HEAD'
       });
       this.developToTracking = developToTracking ? developToTracking.total : 0;
@@ -264,8 +265,8 @@ export class PackageDir {
     try {
       const developToMaster = await this.git.log({
         symmetric: false,
-        from: 'origin/develop',
-        to: 'origin/master'
+        from: `${this.context.origin}/develop`,
+        to: `${this.context.origin}/master`
       });
       this.developToMaster = developToMaster ? developToMaster.total : 0;
     } catch (e) { }
@@ -275,8 +276,8 @@ export class PackageDir {
     try {
       const masterToDevelop = await this.git.log({
         symmetric: false,
-        from: 'origin/master',
-        to: 'origin/develop'
+        from: `${this.context.origin}/master`,
+        to: `${this.context.origin}/develop`
       });
       this.masterToDevelop = masterToDevelop ? masterToDevelop.total : 0;
     } catch (e) { }
@@ -288,7 +289,7 @@ export class PackageDir {
       const trackingToDevelop = await this.git.log({
         symmetric: false,
         from: this.tracking ? this.tracking : 'HEAD',
-        to: 'origin/develop'
+        to: `${this.context.origin}/develop`
       });
       this.trackingToDevelop = trackingToDevelop ? trackingToDevelop.total : 0;
     } catch (e) {
@@ -327,10 +328,10 @@ export class PackageDir {
   }
 
   private async init() {
-    if (PackageDir.domain == undefined) {
+    if (PackageDir.defaultDomain == undefined) {
       try {
         const result = await this.git.raw(['config', 'user.email']);
-        PackageDir.domain = result
+        PackageDir.defaultDomain = result
           .replace(/.*\@/, '')
           .trim()
           .toLowerCase();
@@ -351,11 +352,11 @@ export class PackageDir {
           .replace(/.*</, '')
           .replace(/>.*/, '')
           .toLowerCase();
-        if (PackageDir.domain) {
-          if (author.toLowerCase().endsWith(PackageDir.domain)) {
+        if (PackageDir.defaultDomain) {
+          if (author.toLowerCase().endsWith(PackageDir.defaultDomain)) {
             author = author.substring(
               0,
-              author.length - PackageDir.domain.length - 1
+              author.length - PackageDir.defaultDomain.length - 1
             );
           }
         }
@@ -460,7 +461,7 @@ export class PackageDir {
         trackingPushArrowSize: 1,
         developPushArrowSize: 1,
         masterPushArrowSize: 1,
-        unmergedPushArrowSize: 0,
+        unmergedPushLineSize: 0,
         config
       })
     ];
@@ -504,25 +505,28 @@ export class PackageDir {
    * Output the status label for a workspace member directory
    */
   getStatusLabel({
+    highlightCurrent,
     nameArrowSize,
     trackingPushArrowSize,
     developPushArrowSize,
     masterPushArrowSize,
-    unmergedPushArrowSize: unmergedPushLineSize,
+    unmergedPushLineSize,
     config
   }: {
+    highlightCurrent?: boolean;
     nameArrowSize?: number;
     trackingPushArrowSize?: number;
     developPushArrowSize?: number;
     masterPushArrowSize?: number;
-    unmergedPushArrowSize?: number;
+    unmergedPushLineSize?: number;
     config?: IndicatorConfig;
   } = {}) {
     let textualChalk: Chalk | undefined;
-
+    const isCurrentDir = this.workPackageDir === this.dir;
+ 
     if (config) {
       textualChalk =
-        this.workPackageDir === this.dir ? chalk.bold : chalk.reset;
+        isCurrentDir ? chalk.bold : chalk.reset;
     }
 
     trackingPushArrowSize = trackingPushArrowSize || 1;
@@ -562,7 +566,11 @@ export class PackageDir {
       indicator.pushText(' ');
       indicator.pushText(this.headRelativeArea);
     }
-    return indicator.content;
+    let content = indicator.content;
+    if(isCurrentDir && highlightCurrent) {
+      content = chalk.bgRgb(30,30,0)(content);
+    }
+    return content;
   }
 
   pushTrackingArea(indicator: Indicator, textualChalk?: Chalk) {
@@ -603,6 +611,7 @@ export class PackageDir {
   pushNameArea(indicator: Indicator, textualChalk?: Chalk) {
     return indicator
       .pushText(this.name, textualChalk)
+      .pushText(`@${this.version}`, this.theme.signChalk)
       .push('▶', this.uncommited, this.theme.aheadChalk);
   }
 
