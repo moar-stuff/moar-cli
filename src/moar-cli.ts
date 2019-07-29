@@ -44,12 +44,30 @@ const options: OptionDefinition[] = [
   { name: 'verify', defaultValue: '0' },
 ];
 describe(options, {
-  hide: ['<null> | <RegEx>', 'Hide using the supplied filter criteria'], 'quiet-level': ['0 | 1 | 2', 'Quiet level'],
-  origin: ['<string>', 'Name of the remote to consider origin'],
-  raw: ['0 | 1', 'Show raw output'], 'tag-message': ['<string>', 'Base message for tagging'],
-  show: ['<null> | <RegEx>', 'Show using the supplied filter criteria'],
-  suppress: ['<null> | <RegEx>', 'Suppress using the supplied filter criteria'],
-  verify: ['0 | 1', 'Verify signatures'],
+  hide: ['Hide using the supplied filter criteria',
+    '<null> | <RegEx>'
+  ],
+  'quiet-level': ['Quiet level',
+    '0 | 1 | 2'
+  ],
+  origin: ['Name of the remote to consider origin',
+    '<string>'
+  ],
+  raw: ['Show raw output',
+    '0 | 1'
+  ],
+  'tag-message': ['Base message for tagging',
+    '<string>'
+  ],
+  show: ['Show using the supplied filter criteria',
+    '<null> | <RegEx>'
+  ],
+  suppress: ['Suppress using the supplied filter criteria',
+    '<null> | <RegEx>'
+  ],
+  verify: ['Verify signatures',
+    '0 | 1'
+  ],
 });
 
 const commands: OptionDefinition[] = [
@@ -91,8 +109,7 @@ function describe(set: any[], descriptions: any) {
       item.description = desc[0];
       if (desc.length > 1) {
         item.description += '\n';
-        item.description += (<any>descriptions)[item.name][1];
-        item.description += '\n';
+        item.description += chalk.rgb(30, 30, 0)(desc[1]);
       }
     }
   }
