@@ -59,6 +59,8 @@ export class PackageDir {
   workspaceDir: string;
   noMerged: {
     id: string;
+    ahead: number;
+    behind: number;
     date: string;
     shortName: string;
     lastCommit?: {
@@ -170,7 +172,20 @@ export class PackageDir {
           console.log(`RAW ${rule}: ${raw}`);
         }
         if (rule === 'show') {
-          this.noMerged.push({ id: branch, date, shortName });
+          const behindLog = await this.git.log({
+            symmetric: false,
+            from: branch,
+            to: 'HEAD'
+          });
+          const behind = behindLog.total;
+
+          const aheadLog = await this.git.log({
+            symmetric: false,
+            from: 'HEAD',
+            to: branch
+          });
+          const ahead = aheadLog.total;
+          this.noMerged.push({ id: branch, date, shortName, ahead, behind });
         }
         count += 1;
       }
@@ -252,23 +267,23 @@ export class PackageDir {
 
   private async prepareDevelopToTracking() {
     try {
-      const developToTracking = await this.git.log({
+      const developToTrackingLog = await this.git.log({
         symmetric: false,
         from: `${this.context.origin}/develop`,
         to: this.tracking ? this.tracking : 'HEAD'
       });
-      this.developToTracking = developToTracking ? developToTracking.total : 0;
+      this.developToTracking = developToTrackingLog ? developToTrackingLog.total : 0;
     } catch (e) { }
   }
 
   private async prepareDevelopToMaster() {
     try {
-      const developToMaster = await this.git.log({
+      const developToMasterLog = await this.git.log({
         symmetric: false,
         from: `${this.context.origin}/develop`,
         to: `${this.context.origin}/master`
       });
-      this.developToMaster = developToMaster ? developToMaster.total : 0;
+      this.developToMaster = developToMasterLog ? developToMasterLog.total : 0;
     } catch (e) { }
   }
 
@@ -490,6 +505,9 @@ export class PackageDir {
       const indicator = new Indicator(config);
       indicator.pushText('━'.repeat(maxShortNameLen - shortName.length));
       indicator.pushText(' ');
+      indicator.push('▲', branch.ahead, this.theme.aheadChalk);
+      indicator.push('▼', branch.behind, this.theme.behindChalk);
+      indicator.pushText(' ');
       line.push(indicator.content);
       if (branch.lastCommit) {
         line.push(
@@ -523,7 +541,7 @@ export class PackageDir {
   } = {}) {
     let textualChalk: Chalk | undefined;
     const isCurrentDir = this.workPackageDir === this.dir;
- 
+
     if (config) {
       textualChalk =
         isCurrentDir ? chalk.bold : chalk.reset;
@@ -567,8 +585,8 @@ export class PackageDir {
       indicator.pushText(this.headRelativeArea);
     }
     let content = indicator.content;
-    if(isCurrentDir && highlightCurrent) {
-      content = chalk.bgRgb(30,30,0)(content);
+    if (isCurrentDir && highlightCurrent) {
+      content = chalk.bgRgb(30, 30, 0)(content);
     }
     return content;
   }
