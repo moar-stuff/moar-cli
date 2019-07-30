@@ -102,7 +102,7 @@ export class PackageDir {
       await this.prepareHead();
       await this.prepareDevelop();
       await this.prepareMaster();
-      await this.prepareNoMerged();
+      await this.prepareNoMerged(fullStatus);
       await this.prepareAheadBehind();
       if (fullStatus) {
         for (const branch of this.noMerged) {
@@ -133,7 +133,7 @@ export class PackageDir {
     }
   }
 
-  private async prepareNoMerged() {
+  private async prepareNoMerged(calcAheadBehind: boolean) {
     const branchSummary = await this.git.branch(['-a', '--no-merged']);
     let count = 0;
     const suppressRx = new RegExp(this.context.suppress);
@@ -171,20 +171,24 @@ export class PackageDir {
         if (this.context.raw === '1') {
           console.log(`RAW ${rule}: ${raw}`);
         }
+        let ahead = -1;
+        let behind = -1;
         if (rule === 'show') {
-          const behindLog = await this.git.log({
-            symmetric: false,
-            from: branch,
-            to: 'HEAD'
-          });
-          const behind = behindLog.total;
+          if (calcAheadBehind) {
+            const behindLog = await this.git.log({
+              symmetric: false,
+              from: branch,
+              to: 'HEAD'
+            });
+            behind = behindLog.total;
 
-          const aheadLog = await this.git.log({
-            symmetric: false,
-            from: 'HEAD',
-            to: branch
-          });
-          const ahead = aheadLog.total;
+            const aheadLog = await this.git.log({
+              symmetric: false,
+              from: 'HEAD',
+              to: branch
+            });
+            ahead = aheadLog.total;
+          }
           this.noMerged.push({ id: branch, date, shortName, ahead, behind });
         }
         count += 1;
