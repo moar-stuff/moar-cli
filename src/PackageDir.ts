@@ -445,19 +445,19 @@ export class PackageDir {
       return { good: undefined, result: undefined };
     }
     try {
-      const options = [id, '--name-only', '--date=relative'];
-      if (this.context.verify === '1') {
-        options.push('--show-signature');
-      }
-      const result = await this.git.show(options);
-      return this.checkSign(result);
+      return await this.checkSign(id);
     } catch { }
     return { good: undefined, result: undefined };
   }
 
-  private checkSign(
-    result: string
-  ): { good?: boolean | undefined; result?: string | undefined } {
+  private async checkSign(
+    id: string
+  ): Promise<{ good?: boolean | undefined; result?: string | undefined }> {
+    const options = [id, '--name-only', '--date=relative'];
+    if (this.context.verify === '1') {
+      options.push('--show-signature');
+    }
+    const result = await this.git.show(options);
     if (this.context.verify === '1') {
       if (result.indexOf('gpg: Good signature from') >= 0) {
         return { good: true, result };
@@ -501,11 +501,15 @@ export class PackageDir {
 
       const num = `${++n}`;
       const numBars = '━'.repeat(maxNumLen - num.length);
-      line.push(
-        (i === last ? '┗━' : '┣━') +
-        numBars +
-        ` ${this.theme.unmergedChalk(num)} ${shortName} ━`
-      );
+      const good = branch.relative ? branch.relative.good : undefined;
+      line.push((i === last ? '┗━' : '┣━'));
+      line.push(numBars);
+      line.push(' ');
+      line.push(this.theme.unmergedChalk(num));
+      line.push(' ');
+      line.push(this.theme.signChalk(this.sign(good)));
+      line.push(shortName);
+      line.push(' ━');
       const indicator = new Indicator(config);
       indicator.pushText('━'.repeat(maxShortNameLen - shortName.length));
       indicator.pushText(' ');
