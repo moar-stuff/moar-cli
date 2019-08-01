@@ -21,7 +21,7 @@ export class Command {
   }
 
   protected checkPackageDir(errors: string[]) {
-    const isPackageDir = PackageDir.isPackage(this.packageDir);
+    const isPackageDir = PackageDir.isGit(this.packageDir);
     if (!isPackageDir) {
       errors.push('Status must be run from a git directory with package.json in the root');
     }

@@ -30,7 +30,7 @@ export class StatusCommand extends Command {
     }
 
     for (const workDir of this.workspaceDirs) {
-      const isPackage = PackageDir.isPackage(this.workspaceDir + '/' + workDir);
+      const isPackage = PackageDir.isGit(this.workspaceDir + '/' + workDir);
     if (isPackage) {
         const packageDir = new PackageDir(
           this.packageDir,

@@ -16,10 +16,9 @@ export class PackageDir {
   version: string;
   git: simpleGit.SimpleGit;
 
-  static isPackage(packageDir: string) {
+  static isGit(packageDir: string) {
     const gitExists = fs.existsSync(packageDir + '/.git/config');
-    const packageExists = fs.existsSync(packageDir + '/package.json');
-    return gitExists && packageExists;
+    return gitExists;
   }
 
   static defaultDomain?: string;
@@ -67,7 +66,7 @@ export class PackageDir {
       author: string;
       relative: string;
     };
-    relative?: { good?: boolean; result?: string };
+    relative: { good?: boolean; result?: string };
   }[] = [];
 
   constructor(
@@ -78,8 +77,12 @@ export class PackageDir {
   ) {
     this.workspaceDir = PackageDir.dropLastPathPart(this.workPackageDir);
     this.dir = this.workspaceDir + '/' + name;
-    const packageJson = fs.readFileSync(this.dir + '/package.json')
-    this.version = JSON.parse(packageJson.toString()).version;
+    if(fs.existsSync(this.dir + '/package.json')) {
+      const packageJson = fs.readFileSync(this.dir + '/package.json')
+      this.version = JSON.parse(packageJson.toString()).version;
+    } else {
+      this.version = '';
+    }
     this.git = simpleGit.default(this.dir);
   }
 
@@ -105,10 +108,6 @@ export class PackageDir {
       await this.prepareNoMerged(fullStatus);
       await this.prepareAheadBehind();
       if (fullStatus) {
-        for (const branch of this.noMerged) {
-          branch.relative = await this.showRelative(branch.id);
-          branch.lastCommit = this.parseAuthorAndRelative(branch.relative);
-        }
         this.noMerged.sort((a, b) => {
           if (a.date === b.date) {
             return 0;
@@ -138,32 +137,68 @@ export class PackageDir {
     let count = 0;
     const suppressRx = new RegExp(this.context.suppress);
     const showRx =
-      this.context.show !== '<null>'
+      this.context.show === '<null>'
         ? undefined
         : new RegExp(this.context.show);
     const hideRx =
-      this.context.hide !== '<null>'
+      this.context.hide === '<null>'
         ? undefined
         : new RegExp(this.context.hide);
+    if (this.context.raw === '1') {
+      console.log(`SUPPRESS: ${this.context.suppress}`)
+      console.log(`SHOW: ${this.context.show}`)
+      console.log(`HIDE: ${this.context.hide}`)
+    }
     for (const branch of branchSummary.all) {
       if (branch.startsWith(`remotes/${this.context.origin}/`)) {
         const shortName = PackageDir.simplifyRefName(branch);
         const date = await this.getDate(branch);
-        const raw = `BRANCH: ${date}, ${shortName}`;
+        let ahead = -1;
+        let behind = -1;
+        if (calcAheadBehind) {
+          const behindLog = await this.git.log({
+            symmetric: false,
+            from: branch,
+            to: 'HEAD'
+          });
+          behind = behindLog.total;
+
+          const aheadLog = await this.git.log({
+            symmetric: false,
+            from: 'HEAD',
+            to: branch
+          });
+          ahead = aheadLog.total;
+        }
+        const relative = await this.showRelative(branch);
+        const lastCommit = this.parseAuthorAndRelative(relative);
+        const raw = `BRANCH: ${date}, ${shortName}, ${lastCommit.author}, ${lastCommit.relative}`;
         let rule = 'show';
         if (raw.match(suppressRx)) {
+          if (this.context.raw === '1') {
+            console.log(`SUPPRESS ${raw}`);
+          }
           rule = 'suppress';
         } else {
           if (hideRx !== undefined) {
             if (raw.match(hideRx)) {
+              if (this.context.raw === '1') {
+                console.log(`HIDE ${raw}`);
+              }
               rule = 'hide';
             }
           }
           if (showRx !== undefined) {
             if (hideRx === undefined) {
+              if (this.context.raw === '1') {
+                console.log(`HIDE ${raw}`);
+              }
               rule = 'hide';
             }
             if (raw.match(showRx)) {
+              if (this.context.raw === '1') {
+                console.log(`SHOW ${raw}`);
+              }
               rule = 'show';
             }
           }
@@ -171,25 +206,8 @@ export class PackageDir {
         if (this.context.raw === '1') {
           console.log(`RAW ${rule}: ${raw}`);
         }
-        let ahead = -1;
-        let behind = -1;
         if (rule === 'show') {
-          if (calcAheadBehind) {
-            const behindLog = await this.git.log({
-              symmetric: false,
-              from: branch,
-              to: 'HEAD'
-            });
-            behind = behindLog.total;
-
-            const aheadLog = await this.git.log({
-              symmetric: false,
-              from: 'HEAD',
-              to: branch
-            });
-            ahead = aheadLog.total;
-          }
-          this.noMerged.push({ id: branch, date, shortName, ahead, behind });
+          this.noMerged.push({ id: branch, date, shortName, ahead, behind, relative, lastCommit });
         }
         count += 1;
       }
@@ -484,9 +502,9 @@ export class PackageDir {
         config
       })
     ];
-    const last = this.noMerged.length - 1;
+    const last = this.noMerged.length;
     const maxNumLen = `${last}`.length;
-    let maxShortNameLen = 0;
+    let maxShortNameLen = 1;
     for (let i = 0; i < this.noMerged.length; i++) {
       const branch = this.noMerged[i];
       const len = branch.shortName.length;
@@ -677,7 +695,7 @@ export class PackageDir {
     if (good === true) {
       return '●';
     }
-    return good === undefined ? '◌' : '○';
+    return good === undefined ? '◌' : '◑';
   }
 
   get headRelativeArea() {

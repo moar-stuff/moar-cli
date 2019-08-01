@@ -35,7 +35,7 @@ export class EachCommand extends Command {
 
     let buffer = '';
     for (const workPackageDir of this.workspaceDirs) {
-      const isPackage = PackageDir.isPackage(this.workspaceDir + '/' + workPackageDir);
+      const isPackage = PackageDir.isGit(this.workspaceDir + '/' + workPackageDir);
       if (isPackage) {
         buffer += `cd ../${workPackageDir} && \\\n`;
         const quietLevel = this.context['quiet-level'];
