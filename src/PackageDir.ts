@@ -502,8 +502,7 @@ export class PackageDir {
         config
       })
     ];
-    const last = this.noMerged.length;
-    const maxNumLen = `${last}`.length;
+    const maxNumLen = `${this.noMerged.length}`.length;
     let maxShortNameLen = 1;
     for (let i = 0; i < this.noMerged.length; i++) {
       const branch = this.noMerged[i];
@@ -511,6 +510,7 @@ export class PackageDir {
       maxShortNameLen = maxShortNameLen < len ? len : maxShortNameLen;
     }
     let n = 0;
+    const last = this.noMerged.length - 1;
     for (let i = 0; i < this.noMerged.length; i++) {
       const branch = this.noMerged[i];
       const id = branch.id;
