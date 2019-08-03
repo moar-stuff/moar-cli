@@ -159,7 +159,7 @@ function showHelp() {
       content: 'A tool for managing packages'
     },
     {
-      content: 'moar <command> <options>'
+      content: 'moar <options> <command>'
     },
     {
       header: 'Options',
