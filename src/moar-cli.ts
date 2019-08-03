@@ -23,6 +23,7 @@ const aliases: any = {
   i: 'hide',
   m: 'tag-message',
   o: 'origin',
+  p: 'simplify',
   q: 'quiet-level',
   r: 'raw',
   s: 'status',
@@ -42,6 +43,7 @@ const options: OptionDefinition[] = [
   { name: 'suppress', defaultValue: '$^' },
   { name: 'tag-message', defaultValue: 'tagged' },
   { name: 'verify', defaultValue: '0' },
+  { name: 'simplify', defaultValue: '2' },
 ];
 describe(options, {
   hide: ['Hide using the supplied filter criteria',
@@ -67,6 +69,9 @@ describe(options, {
   ],
   verify: ['Verify signatures',
     '0 | 1'
+  ],
+  simplify: ['Simplify Branch Names',
+    '0 | 1 | 2'
   ],
 });
 
@@ -190,10 +195,10 @@ async function run() {
   if (context._unknown) {
     command = {};
     for (const arg of process.argv) {
-      if(!arg.match(/\//)) {
-        if(arg.match(/-(i|o|q|r|w|u|m|y).+/)) {
+      if (!arg.match(/\//)) {
+        if (arg.match(/-(i|o|p|q|r|w|u|m|y).+/)) {
           const option = aliases[arg.charAt(1)];
-          if(option) {
+          if (option) {
             context[option] = arg.substring(2);
             continue;
           }

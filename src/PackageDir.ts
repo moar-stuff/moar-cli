@@ -151,7 +151,7 @@ export class PackageDir {
       console.log(`HIDE: ${this.context.hide}`)
     }
     for (const branch of branchSummary.all) {
-      const shortName = PackageDir.simplifyRefName(branch);
+      const shortName = this.simplifyRefName(branch);
       const date = await this.getDate(branch);
       let ahead = -1;
       let behind = -1;
@@ -374,11 +374,17 @@ export class PackageDir {
     if (trackingLabel === this.current) {
       trackingLabel = '';
     }
-    trackingLabel = PackageDir.simplifyRefName(trackingLabel);
+    trackingLabel = this.simplifyRefName(trackingLabel);
     this.trackingLabel = trackingLabel;
   }
 
-  private static simplifyRefName(name: string): string {
+  private simplifyRefName(name: string): string {
+    if (this.context.simplify === '0') {
+      return name;
+    }
+    if (this.context.simplify === '1') {
+      return name.replace(/^remotes\/origin\//, 'origin');
+    }
     name = name.replace(/.*\//, '');
     const p1 = name.indexOf('-');
     let p2 = p1;
@@ -635,11 +641,11 @@ export class PackageDir {
     } else {
       const signChalk = this.theme.signChalk;
       if (this.tagVerify.good === true) {
-        indicator.pushText(`●<${PackageDir.simplifyRefName(this.tagVerify.tag)}>`, signChalk);
+        indicator.pushText(`●<${this.simplifyRefName(this.tagVerify.tag)}>`, signChalk);
       } else if (this.tagVerify.good === false) {
-        indicator.pushText(`○<${PackageDir.simplifyRefName(this.tagVerify.tag)}>`, signChalk);
+        indicator.pushText(`○<${this.simplifyRefName(this.tagVerify.tag)}>`, signChalk);
       } else if (this.tagVerify.tag.length > 0) {
-        indicator.pushText(`◌<${PackageDir.simplifyRefName(this.tagVerify.tag)}>`, signChalk);
+        indicator.pushText(`◌<${this.simplifyRefName(this.tagVerify.tag)}>`, signChalk);
       }
       indicator.pushText(' ');
       indicator.pushText(this.headRelativeArea);
@@ -696,7 +702,7 @@ export class PackageDir {
   pushCurrentArea(indicator: Indicator, textualChalk?: Chalk) {
     return indicator
       .pushText(this.sign(this.goodHead), this.theme.signChalk)
-      .pushText(PackageDir.simplifyRefName(this.current), textualChalk)
+      .pushText(this.simplifyRefName(this.current), textualChalk)
       .push('▲', this.ahead, this.theme.aheadChalk)
       .push('▼', this.behind, this.theme.behindChalk);
   }

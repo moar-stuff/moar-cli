@@ -1,6 +1,3 @@
-import chalk from 'chalk';
-import * as simpleGit from 'simple-git/promise';
-
 import { Theme } from './Theme';
 import { Command } from './Command';
 import { PackageDir } from './PackageDir';
