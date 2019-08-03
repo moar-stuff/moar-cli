@@ -28,6 +28,6 @@ export class BranchCommand extends Command {
       this.context
     );
     await packageDir.prepare(true);
-    console.log(packageDir.getNotMergedLabel({ color: true }));
+    console.log(packageDir.getBranchLabel({ color: true }));
   }
 }

@@ -62,6 +62,7 @@ export class PackageDir {
     behind: number;
     date: string;
     shortName: string;
+    mergeable: string;
     lastCommit?: {
       author: string;
       relative: string;
@@ -77,7 +78,7 @@ export class PackageDir {
   ) {
     this.workspaceDir = PackageDir.dropLastPathPart(this.workPackageDir);
     this.dir = this.workspaceDir + '/' + name;
-    if(fs.existsSync(this.dir + '/package.json')) {
+    if (fs.existsSync(this.dir + '/package.json')) {
       const packageJson = fs.readFileSync(this.dir + '/package.json')
       this.version = JSON.parse(packageJson.toString()).version;
     } else {
@@ -132,7 +133,7 @@ export class PackageDir {
     }
   }
 
-  private async prepareNoMerged(calcAheadBehind: boolean) {
+  private async prepareNoMerged(fullStatus: boolean) {
     const branchSummary = await this.git.branch(['-a', '--no-merged']);
     let count = 0;
     const suppressRx = new RegExp(this.context.suppress);
@@ -150,67 +151,99 @@ export class PackageDir {
       console.log(`HIDE: ${this.context.hide}`)
     }
     for (const branch of branchSummary.all) {
-      if (branch.startsWith(`remotes/${this.context.origin}/`)) {
-        const shortName = PackageDir.simplifyRefName(branch);
-        const date = await this.getDate(branch);
-        let ahead = -1;
-        let behind = -1;
-        if (calcAheadBehind) {
-          const behindLog = await this.git.log({
-            symmetric: false,
-            from: branch,
-            to: 'HEAD'
-          });
-          behind = behindLog.total;
+      const shortName = PackageDir.simplifyRefName(branch);
+      const date = await this.getDate(branch);
+      let ahead = -1;
+      let behind = -1;
+      let mergeable = '';
+      if (fullStatus) {
+        if (this.uncommited === 0) {
+          let out = '';
+          try {
+            let rawResult = await exec(`git merge --no-commit --no-ff ${branch}`, {
+              cwd: this.dir
+            });
+            out = rawResult.stderr + '\n' + rawResult.stdout;
+          } catch (e) {
+            out = e.stderr + '\n' + e.stdout;
+          } finally {
+            await this.git.reset(['--hard']);
+          }
+          if (out.indexOf('CONFLICT') !== -1) {
+            mergeable = '🔥 ';
+          } else if (out.indexOf('Already up to date!') !== -1) {
+            mergeable = '✅ ';
+          } else {
+            mergeable = '🙏 ';
+          }
+        }
+        const behindLog = await this.git.log({
+          symmetric: false,
+          from: branch,
+          to: 'HEAD'
+        });
+        behind = behindLog.total;
 
-          const aheadLog = await this.git.log({
-            symmetric: false,
-            from: 'HEAD',
-            to: branch
-          });
-          ahead = aheadLog.total;
-        }
-        const relative = await this.showRelative(branch);
-        const lastCommit = this.parseAuthorAndRelative(relative);
-        const raw = `BRANCH: ${date}, ${shortName}, ${lastCommit.author}, ${lastCommit.relative}`;
-        let rule = 'show';
-        if (raw.match(suppressRx)) {
-          if (this.context.raw === '1') {
-            console.log(`SUPPRESS ${raw}`);
-          }
-          rule = 'suppress';
-        } else {
-          if (hideRx !== undefined) {
-            if (raw.match(hideRx)) {
-              if (this.context.raw === '1') {
-                console.log(`HIDE ${raw}`);
-              }
-              rule = 'hide';
-            }
-          }
-          if (showRx !== undefined) {
-            if (hideRx === undefined) {
-              if (this.context.raw === '1') {
-                console.log(`HIDE ${raw}`);
-              }
-              rule = 'hide';
-            }
-            if (raw.match(showRx)) {
-              if (this.context.raw === '1') {
-                console.log(`SHOW ${raw}`);
-              }
-              rule = 'show';
-            }
-          }
-        }
-        if (this.context.raw === '1') {
-          console.log(`RAW ${rule}: ${raw}`);
-        }
-        if (rule === 'show') {
-          this.noMerged.push({ id: branch, date, shortName, ahead, behind, relative, lastCommit });
-        }
-        count += 1;
+        const aheadLog = await this.git.log({
+          symmetric: false,
+          from: 'HEAD',
+          to: branch
+        });
+        ahead = aheadLog.total;
       }
+      const relative = await this.showRelative(branch);
+      const lastCommit = this.parseAuthorAndRelative(relative);
+      let raw = `BRANCH: ${date}, `;
+      raw += `${mergeable ? 'MERGEABLE' : 'CONFLICT'}, `;
+      raw += `${shortName}, `;
+      raw += `${lastCommit.author}, `;
+      raw += `${lastCommit.relative}`;
+      let rule = 'show';
+      if (raw.match(suppressRx)) {
+        if (this.context.raw === '1') {
+          console.log(`SUPPRESS ${raw}`);
+        }
+        rule = 'suppress';
+      } else {
+        if (hideRx !== undefined) {
+          if (raw.match(hideRx)) {
+            if (this.context.raw === '1') {
+              console.log(`HIDE ${raw}`);
+            }
+            rule = 'hide';
+          }
+        }
+        if (showRx !== undefined) {
+          if (hideRx === undefined) {
+            if (this.context.raw === '1') {
+              console.log(`HIDE ${raw}`);
+            }
+            rule = 'hide';
+          }
+          if (raw.match(showRx)) {
+            if (this.context.raw === '1') {
+              console.log(`SHOW ${raw}`);
+            }
+            rule = 'show';
+          }
+        }
+      }
+      if (this.context.raw === '1') {
+        console.log(`RAW ${rule}: ${raw}`);
+      }
+      if (rule === 'show') {
+        this.noMerged.push({
+          id: branch,
+          date,
+          shortName,
+          ahead,
+          behind,
+          relative,
+          lastCommit,
+          mergeable
+        });
+      }
+      count += 1;
     }
     this.unmergedBranchCount = count;
     this.uncommited = this.status ? this.status.files.length : 0;
@@ -491,7 +524,7 @@ export class PackageDir {
   /**
    * Get the label used for the **Not Merged** command
    */
-  getNotMergedLabel(config?: IndicatorConfig) {
+  getBranchLabel(config?: IndicatorConfig) {
     const buffer: string[] = [
       '┏━> ' +
       this.getStatusLabel({
@@ -534,6 +567,7 @@ export class PackageDir {
       indicator.push('▲', branch.ahead, this.theme.aheadChalk);
       indicator.push('▼', branch.behind, this.theme.behindChalk);
       indicator.pushText(' ');
+      indicator.pushText(branch.mergeable ? '' : '💥 ');
       line.push(indicator.content);
       if (branch.lastCommit) {
         line.push(
