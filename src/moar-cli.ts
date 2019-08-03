@@ -185,11 +185,21 @@ async function run() {
 
   const optionDefinitions = commands.concat(options);
   const context = commandLineArgs(optionDefinitions, { partial: true });
+  applyDefaultValues(context);
   let command: any;
   if (context._unknown) {
     command = {};
-    for (const unknown of context._unknown) {
-      command[unknown] = true;
+    for (const arg of process.argv) {
+      if(!arg.match(/\//)) {
+        if(arg.match(/-(i|o|q|r|w|u|m|y).+/)) {
+          const option = aliases[arg.charAt(1)];
+          if(option) {
+            context[option] = arg.substring(2);
+            continue;
+          }
+        }
+        command[arg] = true;
+      }
     }
   } else {
     command = { help: true };
@@ -243,3 +253,13 @@ async function run() {
     console.log();
   }
 }
+
+/**
+ * Apply default values to the context.
+ */
+function applyDefaultValues(context: commandLineArgs.CommandLineOptions) {
+  for (const option of options) {
+    context[option.name] = context[option.name] || option.defaultValue;
+  }
+}
+
