@@ -1,6 +1,6 @@
 {
   "name": "moar-cli",
-  "version": "2.9.0",
+  "version": "2.9.1",
   "description": "Moar Module Managment for Git",
   "bin": {
     "moar": "bin/moar"
