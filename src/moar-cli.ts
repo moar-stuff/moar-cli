@@ -201,7 +201,7 @@ async function run() {
     command = {};
     for (const arg of process.argv) {
       if (!arg.match(/\//)) {
-        if (arg.match(/-(i|o|p|q|r|w|u|m|y).+/)) {
+        if (arg.match(/-([a-z]).+/)) {
           const option = aliases[arg.charAt(1)];
           if (option) {
             context[option] = arg.substring(2);
