@@ -10,11 +10,14 @@ import { CommandLineOptions } from 'command-line-args';
 
 import child_process from 'child_process';
 import util from 'util';
-const exec = util.promisify(child_process.exec);
 
 export class PackageDir {
+  _exec = util.promisify(child_process.exec);
   version: string;
   git: simpleGit.SimpleGit;
+  suppressRx: RegExp;
+  showRx: RegExp | undefined;
+  hideRx: RegExp | undefined;
 
   static isGit(packageDir: string) {
     const gitExists = fs.existsSync(packageDir + '/.git/config');
@@ -85,6 +88,15 @@ export class PackageDir {
       this.version = '';
     }
     this.git = simpleGit.default(this.dir);
+    this.suppressRx = new RegExp(this.context.suppress);
+    this.showRx =
+      this.context.show === '<null>'
+        ? undefined
+        : new RegExp(this.context.show);
+    this.hideRx =
+      this.context.hide === '<null>'
+        ? undefined
+        : new RegExp(this.context.hide);
   }
 
   private static dropLastPathPart(workspaceDir: string) {
@@ -136,15 +148,6 @@ export class PackageDir {
   private async prepareNoMerged(fullStatus: boolean) {
     const branchSummary = await this.git.branch(['-a', '--no-merged']);
     let count = 0;
-    const suppressRx = new RegExp(this.context.suppress);
-    const showRx =
-      this.context.show === '<null>'
-        ? undefined
-        : new RegExp(this.context.show);
-    const hideRx =
-      this.context.hide === '<null>'
-        ? undefined
-        : new RegExp(this.context.hide);
     if (this.context.raw === '1') {
       console.log(`SUPPRESS: ${this.context.suppress}`)
       console.log(`SHOW: ${this.context.show}`)
@@ -155,28 +158,7 @@ export class PackageDir {
       const date = await this.getDate(branch);
       let ahead = -1;
       let behind = -1;
-      let mergeable = '';
       if (fullStatus) {
-        if (this.uncommited === 0) {
-          let out = '';
-          try {
-            let rawResult = await exec(`git merge --no-commit --no-ff ${branch}`, {
-              cwd: this.dir
-            });
-            out = rawResult.stderr + '\n' + rawResult.stdout;
-          } catch (e) {
-            out = e.stderr + '\n' + e.stdout;
-          } finally {
-            await this.git.reset(['--hard']);
-          }
-          if (out.indexOf('CONFLICT') !== -1) {
-            mergeable = '🔥 ';
-          } else if (out.indexOf('Already up to date!') !== -1) {
-            mergeable = '✅ ';
-          } else {
-            mergeable = '🙏 ';
-          }
-        }
         const behindLog = await this.git.log({
           symmetric: false,
           from: branch,
@@ -194,44 +176,39 @@ export class PackageDir {
       const relative = await this.showRelative(branch);
       const lastCommit = this.parseAuthorAndRelative(relative);
       let raw = `BRANCH: ${date}, `;
-      raw += `${mergeable ? 'MERGEABLE' : 'CONFLICT'}, `;
       raw += `${shortName}, `;
       raw += `${lastCommit.author}, `;
       raw += `${lastCommit.relative}`;
-      let rule = 'show';
-      if (raw.match(suppressRx)) {
-        if (this.context.raw === '1') {
-          console.log(`SUPPRESS ${raw}`);
+      let mergeable = '';
+      if (this.uncommited === 0) {
+        let out = '';
+        let rawResult = await this.exec(`git merge --no-commit --no-ff ${branch}`);
+        out = rawResult.stderr + '\n' + rawResult.stdout;
+        await this.git.reset(['--hard']);
+        if (out.indexOf('CONFLICT') !== -1) {
+          mergeable = '🔥 ';
+        } else if (out.indexOf('Already up to date!') !== -1) {
+          mergeable = '✅ ';
+        } else {
+          rawResult = await this.exec(`git merge ${branch}`);
+          out = rawResult.stderr + '\n' + rawResult.stdout;
+          const diff = await this.exec('git diff HEAD^ --shortstat');
+          if (diff.stderr + diff.stdout === '') {
+            mergeable = '✅ ';
+          } else {
+            mergeable = '🙏 ';
+          }
+          await this.git.reset(['--hard', 'HEAD^']);
         }
-        rule = 'suppress';
+      }
+      if (mergeable === '🔥 ') {
+        raw += ' #CONFLICT ';
+      } else if (mergeable === '✅ ') {
+        raw += ' #MERGE-READY ';
       } else {
-        if (hideRx !== undefined) {
-          if (raw.match(hideRx)) {
-            if (this.context.raw === '1') {
-              console.log(`HIDE ${raw}`);
-            }
-            rule = 'hide';
-          }
-        }
-        if (showRx !== undefined) {
-          if (hideRx === undefined) {
-            if (this.context.raw === '1') {
-              console.log(`HIDE ${raw}`);
-            }
-            rule = 'hide';
-          }
-          if (raw.match(showRx)) {
-            if (this.context.raw === '1') {
-              console.log(`SHOW ${raw}`);
-            }
-            rule = 'show';
-          }
-        }
+        raw += ' #MERGEABLE ';
       }
-      if (this.context.raw === '1') {
-        console.log(`RAW ${rule}: ${raw}`);
-      }
-      if (rule === 'show') {
+      if (this.evaluate(raw) === 'show') {
         this.noMerged.push({
           id: branch,
           date,
@@ -242,11 +219,57 @@ export class PackageDir {
           lastCommit,
           mergeable
         });
+        count += 1;
       }
-      count += 1;
     }
     this.unmergedBranchCount = count;
     this.uncommited = this.status ? this.status.files.length : 0;
+  }
+
+  private evaluate(raw: string) {
+    let rule = 'show';
+    if (raw.match(this.suppressRx)) {
+      if (this.context.raw === '1') {
+        console.log(`SUPPRESS ${raw}`);
+      }
+      rule = 'suppress';
+    }
+    else {
+      if (this.hideRx !== undefined) {
+        if (raw.match(this.hideRx)) {
+          if (this.context.raw === '1') {
+            console.log(`HIDE ${raw}`);
+          }
+          rule = 'hide';
+        }
+      }
+      if (this.showRx !== undefined) {
+        if (this.hideRx === undefined) {
+          if (this.context.raw === '1') {
+            console.log(`HIDE ${raw}`);
+          }
+          rule = 'hide';
+        }
+        if (raw.match(this.showRx)) {
+          if (this.context.raw === '1') {
+            console.log(`SHOW ${raw}`);
+          }
+          rule = 'show';
+        }
+      }
+    }
+    if (this.context.raw === '1') {
+      console.log(`RAW ${rule}: ${raw}`);
+    }
+    return rule;
+  }
+
+  private async exec(cmd: string): Promise<{ e?: any, stderr: string, stdout: string }> {
+    try {
+      return await this._exec(cmd, { cwd: this.dir });
+    } catch (e) {
+      return { e, stderr: e.stderr, stdout: e.stdout };
+    }
   }
 
   private async prepareMaster() {
@@ -301,17 +324,14 @@ export class PackageDir {
       if (describe.length > 0) {
         this.tagVerify.tag = describe.trim();
         if (this.context.verify === '1') {
-          try {
-            await exec(`git tag -v ${this.tagVerify.tag}`, {
-              cwd: this.dir
-            });
+          const execResult = await this.exec(`git tag -v ${this.tagVerify.tag}`);
+          const out = [execResult.stderr, execResult.stdout].join('\n')
+          if (out.match(/.*no signature found.*/)) {
+            this.tagVerify.good = undefined;
+          } else if (execResult.e === undefined && out.match(/.*Good signature from*/)) {
             this.tagVerify.good = true;
-          } catch (e) {
-            if (e.message && e.message.match(/.*no signature found.*/)) {
-              this.tagVerify.good = undefined;
-            } else {
-              this.tagVerify.good = false;
-            }
+          } else {
+            this.tagVerify.good = false;
           }
         }
       }
@@ -383,7 +403,7 @@ export class PackageDir {
       return name;
     }
     if (this.context.simplify === '1') {
-      return name.replace(/^remotes\/origin\//, 'origin');
+      return name.replace(/^remotes\/origin\//, 'origin/');
     }
     name = name.replace(/.*\//, '');
     const p1 = name.indexOf('-');
