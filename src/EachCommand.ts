@@ -39,13 +39,13 @@ export class EachCommand extends Command {
       if (isPackage) {
         buffer += `cd ../${workPackageDir} && \\\n`;
         const quietLevel = this.context['quiet-level'];
-        if(quietLevel === '0') {
+        if (quietLevel === '0') {
           buffer += `echo "# * ${workPackageDir} ${'*'.repeat(60 - workPackageDir.length)}" && \\\n`;
           buffer += `(${command}) && \\\n`;
-        } else if(quietLevel === '1') {
+        } else if (quietLevel === '1') {
           buffer += `echo "${workPackageDir} $(${command}) " && \\\n`;
         }
-        if(quietLevel === '2') {
+        if (quietLevel === '2') {
           buffer += `echo "$(${command}) ${workPackageDir} " && \\\n`;
         }
       }
