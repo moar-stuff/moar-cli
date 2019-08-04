@@ -179,8 +179,8 @@ export class PackageDir {
       raw += `${shortName}, `;
       raw += `${lastCommit.author}, `;
       raw += `${lastCommit.relative}`;
-      let mergeable = '';
-      if (this.uncommited === 0) {
+      let mergeable = ' ';
+      if (fullStatus && this.uncommited === 0) {
         let out = '';
         let rawResult = await this.exec(`git merge --no-commit --no-ff ${branch}`);
         out = rawResult.stderr + '\n' + rawResult.stdout;
