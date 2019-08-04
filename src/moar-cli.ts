@@ -22,6 +22,7 @@ const aliases: any = {
   h: 'help',
   i: 'hide',
   m: 'tag-message',
+  n: 'naked',
   o: 'origin',
   p: 'simplify',
   q: 'quiet-level',
@@ -44,6 +45,7 @@ const options: OptionDefinition[] = [
   { name: 'tag-message', defaultValue: 'tagged' },
   { name: 'verify', defaultValue: '0' },
   { name: 'simplify', defaultValue: '2' },
+  { name: 'naked', defaultValue: '0' }
 ];
 describe(options, {
   hide: ['Hide using the supplied filter criteria',
@@ -72,6 +74,9 @@ describe(options, {
   ],
   simplify: ['Simplify Branch Names',
     '0 | 1 | 2'
+  ],
+  naked: ['Output "naked" content',
+    '0 | 1'
   ],
 });
 

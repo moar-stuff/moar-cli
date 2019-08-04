@@ -531,16 +531,17 @@ export class PackageDir {
    * Get the label used for the **Not Merged** command
    */
   getBranchLabel(config?: IndicatorConfig) {
-    const buffer: string[] = [
-      '┏━> ' +
-      this.getStatusLabel({
+    const buffer: string[] = [];
+    if (this.context.naked !== '1') {
+      const statusLabel = this.getStatusLabel({
         trackingPushArrowSize: 1,
         developPushArrowSize: 1,
         masterPushArrowSize: 1,
         unmergedPushLineSize: 0,
         config
-      })
-    ];
+      });
+      buffer.push(`┏━> ${statusLabel}`);
+    }
     const maxNumLen = `${this.noMerged.length}`.length;
     let maxShortNameLen = 1;
     for (let i = 0; i < this.noMerged.length; i++) {
@@ -552,35 +553,39 @@ export class PackageDir {
     const last = this.noMerged.length - 1;
     for (let i = 0; i < this.noMerged.length; i++) {
       const branch = this.noMerged[i];
-      const id = branch.id;
-      const shortName = branch.shortName;
-      const line: string[] = [];
+      if (this.context.naked === '1') {
+        buffer.push(branch.id);
+      } else {
+        const id = branch.id;
+        const shortName = branch.shortName;
+        const line: string[] = [];
 
-      const num = `${++n}`;
-      const numBars = '━'.repeat(maxNumLen - num.length);
-      const good = branch.relative ? branch.relative.good : undefined;
-      line.push((i === last ? '┗━' : '┣━'));
-      line.push(numBars);
-      line.push(' ');
-      line.push(this.theme.unmergedChalk(num));
-      line.push(' ');
-      line.push(this.theme.signChalk(this.sign(good)));
-      line.push(shortName);
-      line.push(' ━');
-      const indicator = new Indicator(config);
-      indicator.pushText('━'.repeat(maxShortNameLen - shortName.length));
-      indicator.pushText(' ');
-      indicator.push('▲', branch.ahead, this.theme.aheadChalk);
-      indicator.push('▼', branch.behind, this.theme.behindChalk);
-      indicator.pushText(' ');
-      indicator.pushText(branch.mergeable ? '' : '💥 ');
-      line.push(indicator.content);
-      if (branch.lastCommit) {
-        line.push(
-          `${branch.lastCommit.relative} by ${branch.lastCommit.author}`
-        );
+        const num = `${++n}`;
+        const numBars = '━'.repeat(maxNumLen - num.length);
+        const good = branch.relative ? branch.relative.good : undefined;
+        line.push((i === last ? '┗━' : '┣━'));
+        line.push(numBars);
+        line.push(' ');
+        line.push(this.theme.unmergedChalk(num));
+        line.push(' ');
+        line.push(this.theme.signChalk(this.sign(good)));
+        line.push(shortName);
+        line.push(' ━');
+        const indicator = new Indicator(config);
+        indicator.pushText('━'.repeat(maxShortNameLen - shortName.length));
+        indicator.pushText(' ');
+        indicator.push('▲', branch.ahead, this.theme.aheadChalk);
+        indicator.push('▼', branch.behind, this.theme.behindChalk);
+        indicator.pushText(' ');
+        indicator.pushText(branch.mergeable);
+        line.push(indicator.content);
+        if (branch.lastCommit) {
+          line.push(
+            `${branch.lastCommit.relative} by ${branch.lastCommit.author}`
+          );
+        }
+        buffer.push(line.join(''));
       }
-      buffer.push(line.join(''));
     }
     return buffer.join('\n');
   }
