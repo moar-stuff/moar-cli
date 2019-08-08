@@ -1,18 +1,16 @@
-import * as fs from 'fs'
-
-import { default as chalk, Chalk } from 'chalk'
-import * as simpleGit from 'simple-git/promise'
-import { Theme } from './Theme'
-import { Indicator } from './Indicator'
-import { IndicatorConfig } from './IndicatorConfig'
+import { AnsiIndicator } from '../ansi/AnsiIndicator'
+import { AnsiIndicatorConfig } from '../ansi/AnsiIndicatorConfig'
+import { AnsiTransform } from '../ansi/AnsiTransform'
+import { AnsiUtil } from '../ansi/AnsiUtil'
+import { default as chalk } from 'chalk'
+import { PackageTheme } from './PackageTheme'
+import { PrepareConfig } from './PrepareConfig'
 import { StatusResult } from 'simple-git/typings/response'
-
+import { TagVerify } from './TagVerify'
+import * as fs from 'fs'
+import * as simpleGit from 'simple-git/promise'
 import child_process from 'child_process'
 import util from 'util'
-import { TextTransform } from './TextTransform'
-import { ChalkUtil } from './ChalkUtil'
-import { PrepareConfig } from './PrepareConfig'
-import { TagVerify } from './TagVerify'
 
 /**
  * A `PackageDir` is simply a directory **GIT** repo that has a npm compatabile
@@ -77,7 +75,7 @@ export class PackageDir {
   constructor(
     private workPackageDir: string,
     public name: string,
-    readonly theme: Theme
+    readonly theme: PackageTheme
   ) {
     this.workspaceDir = PackageDir.dropLastPathPart(this.workPackageDir)
     this.dir = this.workspaceDir + '/' + name
@@ -169,7 +167,7 @@ export class PackageDir {
       raw += `${shortName}, `
       raw += `${lastCommit.author}, `
       raw += `${lastCommit.relative}`
-      let mergeable = ' '
+      let mergeable = ''
       if (config && config.testMerge && this.uncommited === 0) {
         let out = ''
         await this.git.raw(['tag', '-f', '_moar'])
@@ -179,15 +177,15 @@ export class PackageDir {
           )
           out = rawResult.stderr + '\n' + rawResult.stdout
           if (out.indexOf('CONFLICT') !== -1) {
-            mergeable = '🔥 '
+            mergeable = '🔥'
           } else if (out.indexOf('Already up to date!') !== -1) {
-            mergeable = '👌 '
+            mergeable = '👌'
           } else {
             const diff = await this.exec('git diff _moar --shortstat')
             if (diff.stderr + diff.stdout === '') {
-              mergeable = '✅ '
+              mergeable = '✅'
             } else {
-              mergeable = '🙏 '
+              mergeable = '🙏'
             }
           }
         } finally {
@@ -196,9 +194,9 @@ export class PackageDir {
           await this.git.raw(['tag', '-d', '_moar'])
         }
       }
-      if (mergeable === '🔥 ') {
+      if (mergeable === '🔥' || mergeable === '👌') {
         raw += ' #CONFLICT '
-      } else if (mergeable === '✅ ') {
+      } else if (mergeable === '✅') {
         raw += ' #MERGE-READY '
       } else {
         raw += ' #MERGEABLE '
@@ -479,31 +477,31 @@ export class PackageDir {
   }
 
   get nameAreaLen(): number {
-    const indicator = new Indicator()
+    const indicator = new AnsiIndicator()
     this.pushNameArea(indicator)
     return indicator.content.length
   }
 
   get currentAreaLen(): number {
-    const indicator = new Indicator()
+    const indicator = new AnsiIndicator()
     this.pushCurrentArea(indicator)
     return indicator.content.length
   }
 
   get developAreaLen(): number {
-    const indicator = new Indicator()
+    const indicator = new AnsiIndicator()
     this.pushDevelopArea(indicator)
     return indicator.content.length
   }
 
   get masterAreaLen(): number {
-    const indicator = new Indicator()
+    const indicator = new AnsiIndicator()
     this.pushMasterArea(indicator)
     return indicator.content.length
   }
 
   get unmergedAreaLen(): number {
-    const indicator = new Indicator()
+    const indicator = new AnsiIndicator()
     this.pushUnmergedArea(indicator)
     return indicator.content.length
   }
@@ -560,12 +558,13 @@ export class PackageDir {
     developPushArrowSize?: number
     masterPushArrowSize?: number
     unmergedPushLineSize?: number
-    config?: IndicatorConfig
+    config?: AnsiIndicatorConfig
   } = {}) {
     const isCurrentDir = this.workPackageDir === this.dir
-    const lineTransform: TextTransform = config
-      ? ChalkUtil.chalkTransformation(chalk.bold)
-      : PackageDir.noopTransform
+    const lineTransform: AnsiTransform =
+      config && highlightCurrent && isCurrentDir
+        ? AnsiUtil.chalkTransform(chalk.bold)
+        : PackageDir.noopTransform
 
     trackingPushArrowSize = trackingPushArrowSize || 1
     developPushArrowSize = developPushArrowSize || 1
@@ -573,7 +572,7 @@ export class PackageDir {
     unmergedPushLineSize = unmergedPushLineSize || 0
     nameArrowSize = nameArrowSize || 1
 
-    const indicator = new Indicator(config)
+    const indicator = new AnsiIndicator(config)
     if (unmergedPushLineSize > 0) {
       indicator.pushText('━'.repeat(unmergedPushLineSize))
       indicator.pushText(' ')
@@ -614,9 +613,6 @@ export class PackageDir {
       indicator.pushText(this.headRelativeArea)
     }
     let content = indicator.content
-    if (isCurrentDir && highlightCurrent) {
-      content = chalk.bold.bgRgb(0, 0, 60)(content)
-    }
     return content
   }
 
@@ -627,7 +623,7 @@ export class PackageDir {
     return text
   }
 
-  pushTrackingArea(indicator: Indicator, transform?: TextTransform) {
+  pushTrackingArea(indicator: AnsiIndicator, transform?: AnsiTransform) {
     return this.pushGoodAheadBehind({
       indicator,
       transform,
@@ -638,7 +634,7 @@ export class PackageDir {
     })
   }
 
-  pushUnmergedArea(indicator: Indicator) {
+  pushUnmergedArea(indicator: AnsiIndicator) {
     return indicator.pushCounter(
       'ᚮ',
       this.unmergedBranchCount,
@@ -648,13 +644,13 @@ export class PackageDir {
     )
   }
 
-  pushMasterArea(indicator: Indicator, transform?: TextTransform) {
+  pushMasterArea(indicator: AnsiIndicator, transform?: AnsiTransform) {
     return indicator
       .pushText(this.sign(this.goodMaster), this.theme.signChalk)
       .pushText('master', transform)
   }
 
-  pushDevelopArea(indicator: Indicator, transform?: TextTransform) {
+  pushDevelopArea(indicator: AnsiIndicator, transform?: AnsiTransform) {
     return indicator
       .pushText(this.sign(this.goodDevelop), this.theme.signChalk)
       .pushText('develop', transform)
@@ -662,14 +658,14 @@ export class PackageDir {
       .pushCounter('▼', this.developToMaster, this.theme.behindChalk)
   }
 
-  pushNameArea(indicator: Indicator, transform?: TextTransform) {
+  pushNameArea(indicator: AnsiIndicator, transform?: AnsiTransform) {
     return indicator
       .pushText(this.name, transform)
       .pushText(`@${this.version}`, this.theme.signChalk)
       .pushCounter('▶', this.uncommited, this.theme.aheadChalk)
   }
 
-  pushCurrentArea(indicator: Indicator, transform?: TextTransform) {
+  pushCurrentArea(indicator: AnsiIndicator, transform?: AnsiTransform) {
     return indicator
       .pushText(this.sign(this.goodHead), this.theme.signChalk)
       .pushText(this.simplifyRefName(this.current), transform)
@@ -686,12 +682,12 @@ export class PackageDir {
     transform,
     forceSignChar,
   }: {
-    indicator: Indicator
+    indicator: AnsiIndicator
     label: string
     good: boolean | undefined
     ahead: number
     behind: number
-    transform?: TextTransform
+    transform?: AnsiTransform
     forceSignChar?: boolean
   }) {
     return indicator

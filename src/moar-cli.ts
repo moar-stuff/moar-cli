@@ -1,17 +1,17 @@
-import { AtCommand } from './commands/AtCommand'
-import { BranchCommand } from './commands/BranchCommand'
+import { AtCommand } from './moarCli/AtCommand'
+import { BranchCommand } from './moarCli/BranchCommand'
 import chalk from 'chalk'
-import { EachCommand } from './commands/EachCommand'
-import { NameCommand } from './commands/NameCommand'
-import { StatusCommand } from './commands/StatusCommand'
-import { TagCommand } from './commands/TagCommand'
-import { Command } from './Command'
-import { Theme } from './Theme'
-import { HelpCommand } from './commands/HelpCommand'
-import { CommandElement } from './CommandElement'
+import { EachCommand } from './moarCli/EachCommand'
+import { NameCommand } from './moarCli/NameCommand'
+import { StatusCommand } from './moarCli/StatusCommand'
+import { TagCommand } from './moarCli/TagCommand'
+import { CliCommand } from './cli/CliCommand'
+import { PackageTheme } from './moarCli/PackageTheme'
+import { HelpCommand } from './moarCli/HelpCommand'
+import { CliElement } from './cli/CliElement'
 
 const helpCommand = new HelpCommand()
-export const commands: Command[] = []
+export const commands: CliCommand[] = []
 commands.push(helpCommand)
 commands.push(new AtCommand())
 commands.push(new BranchCommand())
@@ -34,16 +34,16 @@ if (cliCommands.length < 3) {
   cliCommands.push('help')
 }
 
-const theme: Theme = {
+const theme: PackageTheme = {
   aheadChalk: chalk.green,
   behindChalk: chalk.red,
   signChalk: chalk.magenta,
   uncommitedChalk: chalk.cyan,
   unmergedChalk: chalk.yellow,
-  emphasis: chalk.bold,
-  commandChalk: chalk.yellow,
-  commentChalk: chalk.green,
-  optionChalk: chalk.cyan,
+  emphasisTransform: chalk.bold,
+  commandTransform: chalk.yellow,
+  commentTransform: chalk.green,
+  optionTransform: chalk.cyan,
 }
 
 const errors: string[] = []
@@ -53,8 +53,8 @@ start()
 function start() {
   for (let i = 0; i < cliCommands.length; i++) {
     let cliCommand = cliCommands[i]
-    if (CommandElement.match(helpCommand.config, cliCommand)) {
-      Command.run(helpCommand, theme, errors).then(() => {
+    if (CliElement.match(helpCommand.config, cliCommand)) {
+      CliCommand.run(helpCommand, theme, errors).then(() => {
         process.exit(0)
       })
       return
@@ -64,8 +64,8 @@ function start() {
   for (let i = 0; i < cliCommands.length; i++) {
     let cliCommand = cliCommands[i]
     for (const command of commands) {
-      if (CommandElement.match(command.config, cliCommand)) {
-        Command.run(command, theme, errors).then(() => {
+      if (CliElement.match(command.config, cliCommand)) {
+        CliCommand.run(command, theme, errors).then(() => {
           process.exit(0)
         })
         return

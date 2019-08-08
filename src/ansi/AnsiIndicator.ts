@@ -1,22 +1,21 @@
-import { Chalk } from 'chalk'
-import { IndicatorConfig } from './IndicatorConfig'
-import { TextTransform } from './TextTransform'
+import { AnsiIndicatorConfig } from './AnsiIndicatorConfig'
+import { AnsiTransform } from './AnsiTransform'
 
 /**
  * A display element for the console output.
  */
-export class Indicator {
+export class AnsiIndicator {
   private brackets = ''
   private buffer = ''
 
-  constructor(readonly config?: IndicatorConfig) {}
+  constructor(readonly config?: AnsiIndicatorConfig) {}
 
   pushArrowLine(size: number) {
     this.buffer += ' ' + '━'.repeat(size) + '> '
     return this
   }
 
-  pushText(text: string, transform?: TextTransform) {
+  pushText(text: string, transform?: AnsiTransform) {
     this.buffer += transform ? transform(text) : text
     return this
   }
@@ -24,7 +23,7 @@ export class Indicator {
   pushCounter(
     indicator: string,
     count: number,
-    transform: TextTransform,
+    transform: AnsiTransform,
     force?: boolean,
     noPad?: boolean
   ) {

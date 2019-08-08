@@ -1,13 +1,11 @@
-import { Theme } from '../Theme'
-import { CommandLineOptions } from 'command-line-args'
-import { PackageDir } from '../PackageDir'
-import { RootCommand } from '../RootCommand'
-import { CommandElement } from '../CommandElement'
+import { PackageDir } from './PackageDir'
+import { PackageCommand } from './PackageCommand'
+import { CliElement } from '../cli/CliElement'
 
 /**
  * Build a script to run a command in **each** package dir.
  */
-export class EachCommand extends RootCommand {
+export class EachCommand extends PackageCommand {
   constructor() {
     super({
       alias: 'e',
@@ -49,13 +47,13 @@ export class EachCommand extends RootCommand {
     let command = defaultCommand
     for (let i = 3; i < args.length; i++) {
       const arg = args[i]
-      if (CommandElement.isOption(arg)) {
-        if (CommandElement.match(briefOpt, arg)) {
+      if (CliElement.isOption(arg)) {
+        if (CliElement.match(briefOpt, arg)) {
           brief = true
-        } else if (CommandElement.match(rightOpt, arg)) {
+        } else if (CliElement.match(rightOpt, arg)) {
           right = true
         }
-      } else if (CommandElement.match(this.config, arg)) {
+      } else if (CliElement.match(this.config, arg)) {
         // noop
       } else {
         command = arg

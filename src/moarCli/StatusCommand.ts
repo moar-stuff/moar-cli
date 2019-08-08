@@ -1,13 +1,13 @@
-import { PackageDir } from '../PackageDir'
-import { RootCommand } from '../RootCommand'
-import { PrepareConfig } from '../PrepareConfig';
-import { CommandElement } from '../CommandElement';
+import { PackageDir } from './PackageDir'
+import { PackageCommand } from './PackageCommand'
+import { PrepareConfig } from './PrepareConfig';
+import { CliElement } from '../cli/CliElement';
 import { verify } from 'crypto';
 
 /**
  * A command to show status for the Workspace.
  */
-export class StatusCommand extends RootCommand {
+export class StatusCommand extends PackageCommand {
   constructor() {
     super({
       alias: 's',
@@ -47,8 +47,8 @@ export class StatusCommand extends RootCommand {
     const args = process.argv
     for (let i = 3; i < args.length; i++) {
       const arg = args[i]
-      if (CommandElement.isOption(arg)) {
-        if (CommandElement.match(verifyOpt, arg)) {
+      if (CliElement.isOption(arg)) {
+        if (CliElement.match(verifyOpt, arg)) {
           prepareConfig.verify = true
         }
       }
@@ -59,7 +59,7 @@ export class StatusCommand extends RootCommand {
         const packageDir = new PackageDir(
           this.moarPackageDir,
           workDir,
-          this.theme
+          this.packageTheme
         )
         await packageDir.prepare(prepareConfig)
         this.packageDirs.push(packageDir)

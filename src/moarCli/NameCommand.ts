@@ -1,9 +1,9 @@
-import { RootCommand } from '../RootCommand'
+import { PackageCommand } from './PackageCommand'
 
 /**
  * Display the version of the current package.
  */
-export class NameCommand extends RootCommand {
+export class NameCommand extends PackageCommand {
   constructor() {
     super({
       alias: 'n',

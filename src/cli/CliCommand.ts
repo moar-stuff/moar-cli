@@ -1,87 +1,40 @@
-import * as fs from 'fs'
-import { CommandConfig } from './CommandConfig'
-import { OptionConfig } from './OptionConfig'
-import { PackageDir } from './PackageDir'
-import { Theme } from './Theme'
-
-let _moarPackageDir: string
-if (process.env.MOAR_PACKAGE_DIR) {
-  _moarPackageDir = process.env.MOAR_PACKAGE_DIR
-} else {
-  _moarPackageDir = process.cwd()
-}
+import { CliCommandConfig } from './CliCommandConfig'
+import { CliOptionConfig } from './CliOptionConfig'
+import { CliTheme } from './CliTheme';
 
 const _cliName = process.argv[1].replace(/.*\//, '').replace(/\..*/, '')
 
 /**
  * Command provided by **moar-cli**.
  */
-export abstract class Command {
+export abstract class CliCommand {
+  _theme?: CliTheme
+
+  get theme() {
+    return <CliTheme>this._theme
+  }
+
   static get cliName() {
     return _cliName
   }
 
-  static async run(command: Command, theme: Theme, errors: string[]) {
-    command._theme = theme
-    await command.run(errors)
-  }
+  protected readonly options: Record<string, CliOptionConfig>
 
-  _theme?: Theme
-  private _packageDir?: PackageDir
-  protected packageDirs: PackageDir[] = []
-  protected workspaceDir: string
-  protected workspaceDirs: string[]
-  protected readonly options: Record<string, OptionConfig>
-
-  protected get moarPackageDir() {
-    return _moarPackageDir
-  }
-
-  constructor(readonly config: CommandConfig) {
-    const pos = this.moarPackageDir.lastIndexOf('/')
-    this.workspaceDir = this.moarPackageDir.substring(0, pos)
-    this.workspaceDirs = fs.readdirSync(this.workspaceDir)
-    const options: Record<string, OptionConfig> = {}
+  constructor(readonly config: CliCommandConfig) {
+    const options: Record<string, CliOptionConfig> = {}
     for (const option of config.options) {
       options[option.name] = option
     }
     this.options = options
   }
 
-  get theme() {
-    return <Theme>this._theme
-  }
-
-  get packageDir() {
-    if (!this._packageDir) {
-      const errors: string[] = []
-      if (this.checkPackageDir(errors)) {
-        throw new Error(errors[0])
-      }
-    }
-    return <PackageDir>this._packageDir
-  }
-
   abstract async run(errors: string[]): Promise<void>
 
-  protected checkPackageDir(errors: string[]) {
-    const isPackageDir = PackageDir.isGit(this.moarPackageDir)
-    if (!isPackageDir) {
-      errors.push('Must be run from a git repository root')
-    } else {
-      const dir = this.moarPackageDir.substring(
-        this.moarPackageDir.lastIndexOf('/') + 1
-      )
-      this._packageDir = new PackageDir(this.moarPackageDir, dir, this.theme)
-    }
-    return errors.length > 0
-  }
-
   get help() {
-    const commentChalk = this.theme.commentChalk
-    const emphasis = this.theme.emphasis
-    const commandChalk = this.theme.commandChalk
-    const optionChalk = this.theme.optionChalk
+    const commentChalk = this.theme.commentTransform
+    const emphasis = this.theme.emphasisTransform
+    const commandChalk = this.theme.commandTransform
+    const optionChalk = this.theme.optionTransform
     let defaultOption = ''
     for (const option of this.config.options) {
       if (!option.alias) {
@@ -92,11 +45,14 @@ export abstract class Command {
     buffer.push(commentChalk('# '))
     buffer.push(commandChalk('SYNTAX'))
     buffer.push(': ')
-    buffer.push(commandChalk(Command.cliName))
+    buffer.push(commandChalk(CliCommand.cliName))
     buffer.push(' ')
     buffer.push(commandChalk(this.config.name))
     buffer.push(' [')
     buffer.push(optionChalk('<options>'))
+    buffer.push(']')
+    buffer.push(' [')
+    buffer.push(commandChalk('help'))
     buffer.push(']')
     buffer.push(' ')
     buffer.push(optionChalk(defaultOption))
@@ -135,7 +91,7 @@ export abstract class Command {
           columnBuffer.push(optionChalk(`--${option.name}`))
           columnBuffer.push(')')
           if (option.type && option.type !== 'boolean') {
-            columnBuffer.push(optionChalk(this.theme.emphasis('=')))
+            columnBuffer.push(optionChalk(this.theme.emphasisTransform('=')))
             columnBuffer.push('<')
             columnBuffer.push(commentChalk(option.type))
             columnBuffer.push('>')
@@ -150,7 +106,7 @@ export abstract class Command {
         buffer.push('━'.repeat(maxColumnLen - columnLen))
         buffer.push('━')
         buffer.push(' ')
-        buffer.push(option.desc)
+        buffer.push(commentChalk(option.desc))
         buffer.push('\n')
       }
       buffer.push(commentChalk('#'))
@@ -160,18 +116,18 @@ export abstract class Command {
     buffer.push(commentChalk('EXAMPLE: '))
     buffer.push(commentChalk(emphasis(this.config.desc)))
     buffer.push('\n')
-    buffer.push(commentChalk('#    '))
+    buffer.push(commentChalk('     '))
     if (this.config.example) {
-      buffer.push(commandChalk(this.config.example))
+      buffer.push((this.config.example))
     } else {
-      buffer.push(commandChalk(Command.cliName))
+      buffer.push((CliCommand.cliName))
       buffer.push(' ')
-      buffer.push(commandChalk(this.config.name))
+      buffer.push((this.config.name))
     }
     return buffer.join('')
   }
 
-  private calcOptionColumnLen(option: OptionConfig) {
+  private calcOptionColumnLen(option: CliOptionConfig) {
     let columnLen = option.alias
       ? `(-${option.alias}|--${option.name})`.length
       : option.name.length + 1
@@ -179,5 +135,10 @@ export abstract class Command {
       columnLen += `=<${option.type}>`.length
     }
     return columnLen
+  }
+
+  static async run(command: CliCommand, theme: CliTheme, errors: string[]) {
+    command._theme = theme
+    await command.run(errors)
   }
 }

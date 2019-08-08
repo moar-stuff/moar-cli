@@ -1,7 +1,7 @@
+import { PackageCommand } from './PackageCommand'
 import child_process from 'child_process'
 import util from 'util'
-import { RootCommand } from '../RootCommand'
-import { CommandElement } from '../CommandElement';
+import { CliElement } from '../cli/CliElement';
 const exec = util.promisify(child_process.exec)
 
 /**
@@ -10,11 +10,11 @@ const exec = util.promisify(child_process.exec)
  * The tag applied to the package is built using the base tag named plus
  * information from all packages in the workspace.
  */
-export class TagCommand extends RootCommand {
+export class TagCommand extends PackageCommand {
   constructor() {
     super({
       alias: 't',
-      desc: 'Write and push a tag',      
+      desc: 'Write and push a tag',
       name: 'tag', 
       options: [{
         alias: 'm',
@@ -37,9 +37,9 @@ export class TagCommand extends RootCommand {
     const messageOpt = this.options['message']
     for(let i = 3; i < args.length; i++) {
       const arg = args[i]
-      if(CommandElement.isOption(arg)) {
-        if(CommandElement.match(messageOpt, arg)) {
-          message = CommandElement.value(arg)
+      if(CliElement.isOption(arg)) {
+        if(CliElement.match(messageOpt, arg)) {
+          message = CliElement.value(messageOpt, args, i)
         }
       } else {
         tag = arg
