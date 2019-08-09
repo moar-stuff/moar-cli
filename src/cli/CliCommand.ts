@@ -2,7 +2,7 @@ import { CliCommandConfig } from './CliCommandConfig'
 import { CliOptionConfig } from './CliOptionConfig'
 import { CliTheme } from './CliTheme'
 
-const _cliName = process.argv[1].replace(/.*\//, '').replace(/\..*/, '')
+const _cliName = process.argv[1].replace(/.*\//, '').replace(/\..*/, '').replace(/\-cli$/, '')
 
 /**
  * Command provided by **moar-cli**.
