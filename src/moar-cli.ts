@@ -9,6 +9,7 @@ import { CliCommand } from './cli/CliCommand'
 import { PackageTheme } from './moarCli/PackageTheme'
 import { HelpCommand } from './moarCli/HelpCommand'
 import { CliElement } from './cli/CliElement'
+import { TagRefetchCommand } from './moarCli/TagRefetchCommand';
 
 const helpCommand = new HelpCommand()
 export const commands: CliCommand[] = []
@@ -19,6 +20,7 @@ commands.push(new EachCommand())
 commands.push(new NameCommand())
 commands.push(new StatusCommand())
 commands.push(new TagCommand())
+commands.push(new TagRefetchCommand())
 
 const cliCommands: string[] = []
 

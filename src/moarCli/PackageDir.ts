@@ -234,7 +234,7 @@ export class PackageDir {
     return rule
   }
 
-  private async exec(
+  async exec(
     cmd: string
   ): Promise<{ e?: any; stderr: string; stdout: string }> {
     try {
