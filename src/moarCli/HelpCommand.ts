@@ -23,7 +23,7 @@ export class HelpCommand extends CliCommand {
     for (const arg of args) {
       const versionOption = HelpCommand.versionOption
       if (CliElement.match(versionOption, arg)) {
-        this.log(packageJson.version)
+        console.log(packageJson.version)
         return
       }
     }
@@ -31,8 +31,25 @@ export class HelpCommand extends CliCommand {
     const optionChalk = this.theme.optionTransform
     const commentChalk = this.theme.commentTransform
     const commandList: Array<string> = []
+    let maxLen = 0
     for (const command of commands) {
-      commandList.push(`(${command.config.alias}|${command.config.name})`)
+      let len = 0
+      len += command.config.alias.length
+      len += command.config.name.length
+      maxLen = Math.max(maxLen, len)
+    }
+    for (const command of commands) {
+      let len = 0
+      len += command.config.alias.length
+      len += command.config.name.length
+      let line = commentChalk('#')
+      line += '    '
+      line += `(${command.config.alias}|${command.config.name})`
+      line += ' '
+      line += '━'.repeat(1 + maxLen - len)
+      line += ' '
+      line += commentChalk(this.theme.emphasisTransform(command.config.desc))
+      commandList.push(line)
     }
     commandList.sort()
     this.apply(commandList, commandChalk)
@@ -49,47 +66,34 @@ export class HelpCommand extends CliCommand {
         if (command !== this) {
           command._theme = this.theme
           if (CliElement.match(command.config, arg)) {
-            this.log(command.help)
+            console.log(command.help)
             return
           }
         }
       }
     }
-    this.log(`
+    console.log(
+      this.trimLines(`
       ${commentChalk('#')} ${commandChalk('SYNTAX')}: ${commandChalk(
-      cliName
-    )} <${commandUsage}> [${commandChalk('help')}] [<${optionsUsage}>]
+        cliName
+      )} <${commandUsage}> [${commandChalk('help')}] [<${optionsUsage}>]
       ${commentChalk('#')}
-      ${commentChalk(`#`)} ${commandChalk('COMMANDS')}: ${commandList.join('|')}
+      ${commentChalk(`#`)} ${commandChalk('COMMANDS')}:\n${commandList.join(
+        '\n'
+      )}
+      ${commentChalk('#')}
       ${commentChalk(`#`)} ${optionChalk('OPTIONS')}: ${optionList.join('|')}
       ${commentChalk('#')}      
       ${commentChalk(
         `# EXAMPLE: ${this.theme.emphasisTransform(this.config.desc)}`
       )}
-      ${commentChalk(`#`)} ${commandChalk(`${cliName} branch help`)}
-    `)
+    `) + `\n  ${cliName} branch help`
+    )
   }
 
   apply(list: string[], transform: AnsiTransform) {
     for (let i = 0; i < list.length; i++) {
       list[i] = transform(list[i])
     }
-  }
-
-  log(text: string) {
-    const list = text.split('\n')
-    for (let i = 0; i < list.length; i++) {
-      list[i] = list[i].trim()
-    }
-    while (list[0] !== undefined && list[0].trim() === '') {
-      list.shift()
-    }
-    while (
-      list[list.length - 1] !== undefined &&
-      list[list.length - 1].trim() === ''
-    ) {
-      list.pop()
-    }
-    console.log(list.join('\n'))
   }
 }
