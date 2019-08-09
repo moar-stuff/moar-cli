@@ -141,4 +141,21 @@ export abstract class CliCommand {
     command._theme = theme
     await command.run(errors)
   }
+
+  trimLines(text: string) {
+    const list = text.split('\n')
+    for (let i = 0; i < list.length; i++) {
+      list[i] = list[i].trim()
+    }
+    while (list[0] !== undefined && list[0].trim() === '') {
+      list.shift()
+    }
+    while (
+      list[list.length - 1] !== undefined &&
+      list[list.length - 1].trim() === ''
+    ) {
+      list.pop()
+    }
+    return list.join('\n')
+  }
 }
