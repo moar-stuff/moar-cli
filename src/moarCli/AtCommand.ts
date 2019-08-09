@@ -38,7 +38,7 @@ export class AtCommand extends PackageCommand {
     const majorAddOpt = this.options['major-add']
     const minorAddOpt = this.options['minor-add']
     const patchAddOpt = this.options['patch-add']
-    for (let i = 0; i < args.length; i++) {
+    for (let i = 3; i < args.length; i++) {
       let arg = args[i]
       if (CliElement.match(majorAddOpt, arg)) {
         version = `${Number.parseInt(versionParts[0]) + 1}.0.0`

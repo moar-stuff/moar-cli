@@ -10,6 +10,7 @@ import { PackageTheme } from './moarCli/PackageTheme';
 import { HelpCommand } from './moarCli/HelpCommand';
 import { CliElement } from './cli/CliElement';
 import { TagRefetchCommand } from './moarCli/TagRefetchCommand';
+import { ReleaseCommand } from './moarCli/ReleaseCommand';
 
 const helpCommand = new HelpCommand();
 export const commands: CliCommand[] = [];
@@ -21,6 +22,7 @@ commands.push(new NameCommand());
 commands.push(new StatusCommand());
 commands.push(new TagCommand());
 commands.push(new TagRefetchCommand());
+commands.push(new ReleaseCommand());
 
 const cliCommands: string[] = [];
 
