@@ -1,6 +1,6 @@
 import { CliCommandConfig } from './CliCommandConfig'
 import { CliOptionConfig } from './CliOptionConfig'
-import { CliTheme } from './CliTheme';
+import { CliTheme } from './CliTheme'
 
 const _cliName = process.argv[1].replace(/.*\//, '').replace(/\..*/, '')
 
@@ -118,11 +118,11 @@ export abstract class CliCommand {
     buffer.push('\n')
     buffer.push(commentChalk('     '))
     if (this.config.example) {
-      buffer.push((this.config.example))
+      buffer.push(this.config.example)
     } else {
-      buffer.push((CliCommand.cliName))
+      buffer.push(CliCommand.cliName)
       buffer.push(' ')
-      buffer.push((this.config.name))
+      buffer.push(this.config.name)
     }
     return buffer.join('')
   }

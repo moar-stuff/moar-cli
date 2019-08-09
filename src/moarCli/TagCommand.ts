@@ -1,7 +1,7 @@
 import { PackageCommand } from './PackageCommand'
 import child_process from 'child_process'
 import util from 'util'
-import { CliElement } from '../cli/CliElement';
+import { CliElement } from '../cli/CliElement'
 const exec = util.promisify(child_process.exec)
 
 /**
@@ -15,18 +15,20 @@ export class TagCommand extends PackageCommand {
     super({
       alias: 't',
       desc: 'Write and push a tag',
-      name: 'tag', 
-      options: [{
-        alias: 'm',
-        desc: 'Base tag message',
-        name: 'message', 
-        type: 'string',
-      },
-      {
-        alias: '',
-        desc: 'Base tag message',
-        name: 'tag'
-      }]
+      name: 'tag',
+      options: [
+        {
+          alias: 'm',
+          desc: 'Base tag message',
+          name: 'message',
+          type: 'string',
+        },
+        {
+          alias: '',
+          desc: 'Base tag message',
+          name: 'tag',
+        },
+      ],
     })
   }
 
@@ -35,10 +37,10 @@ export class TagCommand extends PackageCommand {
     let tag = ''
     const args = process.argv
     const messageOpt = this.options['message']
-    for(let i = 3; i < args.length; i++) {
+    for (let i = 3; i < args.length; i++) {
       const arg = args[i]
-      if(CliElement.isOption(arg)) {
-        if(CliElement.match(messageOpt, arg)) {
+      if (CliElement.isOption(arg)) {
+        if (CliElement.match(messageOpt, arg)) {
           message = CliElement.value(messageOpt, args, i)
         }
       } else {

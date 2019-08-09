@@ -1,8 +1,8 @@
 import * as fs from 'fs'
 import { CliCommand } from '../cli/CliCommand'
-import { PackageDir } from './PackageDir';
-import { CliCommandConfig } from '../cli/CliCommandConfig';
-import { PackageTheme } from './PackageTheme';
+import { PackageDir } from './PackageDir'
+import { CliCommandConfig } from '../cli/CliCommandConfig'
+import { PackageTheme } from './PackageTheme'
 
 let _moarPackageDir: string
 if (process.env.MOAR_PACKAGE_DIR) {
@@ -28,7 +28,7 @@ export abstract class PackageCommand extends CliCommand {
   }
 
   protected abstract doRun(): Promise<void>
-  
+
   async run(errors: string[]): Promise<void> {
     if (this.checkPackageDir(errors)) {
       return
@@ -58,7 +58,11 @@ export abstract class PackageCommand extends CliCommand {
       const dir = this.moarPackageDir.substring(
         this.moarPackageDir.lastIndexOf('/') + 1
       )
-      this._packageDir = new PackageDir(this.moarPackageDir, dir, this.packageTheme)
+      this._packageDir = new PackageDir(
+        this.moarPackageDir,
+        dir,
+        this.packageTheme
+      )
     }
     return errors.length > 0
   }

@@ -7,9 +7,10 @@ export class NameCommand extends PackageCommand {
   constructor() {
     super({
       alias: 'n',
-      desc: 'Display the name from a package.json file found in the current directory',
-      name: 'name', 
-      options: []
+      desc:
+        'Display the name from a package.json file found in the current directory',
+      name: 'name',
+      options: [],
     })
   }
 

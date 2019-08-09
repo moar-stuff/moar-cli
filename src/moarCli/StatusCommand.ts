@@ -1,8 +1,8 @@
 import { PackageDir } from './PackageDir'
 import { PackageCommand } from './PackageCommand'
-import { PrepareConfig } from './PrepareConfig';
-import { CliElement } from '../cli/CliElement';
-import { verify } from 'crypto';
+import { PrepareConfig } from './PrepareConfig'
+import { CliElement } from '../cli/CliElement'
+import { verify } from 'crypto'
 
 /**
  * A command to show status for the Workspace.
@@ -12,12 +12,14 @@ export class StatusCommand extends PackageCommand {
     super({
       alias: 's',
       desc: 'Display status of all packages from the parent directory',
-      name: 'status', 
-      options: [{
-        alias: 'y',
-        desc:'Verify signatures',
-        name: 'verify'
-      }]
+      name: 'status',
+      options: [
+        {
+          alias: 'y',
+          desc: 'Verify signatures',
+          name: 'verify',
+        },
+      ],
     })
   }
 
@@ -41,7 +43,7 @@ export class StatusCommand extends PackageCommand {
       hideRx: new RegExp('$^'),
       naked: false,
       rawMode: false,
-      simplifyNameMode: 0
+      simplifyNameMode: 0,
     }
     const verifyOpt = this.options['verify']
     const args = process.argv

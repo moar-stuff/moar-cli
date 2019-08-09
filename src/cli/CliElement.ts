@@ -1,4 +1,4 @@
-import { CliOptionConfig } from "./CliOptionConfig";
+import { CliOptionConfig } from './CliOptionConfig'
 
 export class CliElement {
   name = ''
@@ -23,22 +23,25 @@ export class CliElement {
 
   static value(option: CliOptionConfig, args: string[], index: number): string {
     let arg = args[index]
-    if(arg.startsWith(option.alias + '=') || arg.startsWith(option.name + '=')) {
+    if (
+      arg.startsWith(option.alias + '=') ||
+      arg.startsWith(option.name + '=')
+    ) {
       const pos = arg.indexOf('=') + 1
       return arg.substring(pos)
     }
     const alias = '-' + option.alias
     const name = '--' + option.name
-    if(arg.startsWith(alias)) {
+    if (arg.startsWith(alias)) {
       arg = arg.substring(alias.length)
-      if(arg.length === 0) {
+      if (arg.length === 0) {
         arg = args[index + 1]
       }
       return arg
     }
-    if(arg.startsWith(name)) {
+    if (arg.startsWith(name)) {
       arg = arg.substring(name.length)
-      if(arg.length === 0) {
+      if (arg.length === 0) {
         arg = args[index + 1]
       }
       return arg
