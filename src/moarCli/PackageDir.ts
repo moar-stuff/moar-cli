@@ -21,7 +21,7 @@ import util from 'util'
  */
 export class PackageDir {
   static defaultDomain?: string
-  private _exec = util.promisify(child_process.exec)
+  private static _exec = util.promisify(child_process.exec)
   ahead = 0
   behind = 0
   current = ''
@@ -238,7 +238,7 @@ export class PackageDir {
     cmd: string
   ): Promise<{ e?: any; stderr: string; stdout: string }> {
     try {
-      return await this._exec(cmd, { cwd: this.dir })
+      return await PackageDir._exec(cmd, { cwd: this.dir })
     } catch (e) {
       return { e, stderr: e.stderr, stdout: e.stdout }
     }

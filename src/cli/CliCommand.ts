@@ -1,13 +1,20 @@
 import { CliCommandConfig } from './CliCommandConfig'
 import { CliOptionConfig } from './CliOptionConfig'
 import { CliTheme } from './CliTheme'
+import child_process from 'child_process'
+import util from 'util'
+import { CliExecResult } from './CliExecResult'
 
-const _cliName = process.argv[1].replace(/.*\//, '').replace(/\..*/, '').replace(/\-cli$/, '')
+const _cliName = process.argv[1]
+  .replace(/.*\//, '')
+  .replace(/\..*/, '')
+  .replace(/\-cli$/, '')
 
 /**
  * Command provided by **moar-cli**.
  */
 export abstract class CliCommand {
+  private static _exec = util.promisify(child_process.exec)
   _theme?: CliTheme
 
   get theme() {
@@ -85,16 +92,20 @@ export abstract class CliCommand {
         buffer.push(commentChalk('#    '))
         let columnBuffer: string[] = []
         if (option.alias) {
-          columnBuffer.push('(')
-          columnBuffer.push(optionChalk(`-${option.alias}`))
-          columnBuffer.push('|')
-          columnBuffer.push(optionChalk(`--${option.name}`))
-          columnBuffer.push(')')
           if (option.type && option.type !== 'boolean') {
+            columnBuffer.push('(')
+            columnBuffer.push(optionChalk(`-${option.alias}`))
+            columnBuffer.push('|')
+            columnBuffer.push(optionChalk(`--${option.name}`))
+            columnBuffer.push(')')
             columnBuffer.push(optionChalk(this.theme.emphasisTransform('=')))
             columnBuffer.push('<')
             columnBuffer.push(commentChalk(option.type))
             columnBuffer.push('>')
+          } else {
+            columnBuffer.push(optionChalk(`-${option.alias}`))
+            columnBuffer.push('|')
+            columnBuffer.push(optionChalk(`--${option.name}`))
           }
         } else {
           columnBuffer.push(optionChalk(option.name))
@@ -157,5 +168,13 @@ export abstract class CliCommand {
       list.pop()
     }
     return list.join('\n')
+  }
+
+  async exec(cmd: string): Promise<CliExecResult> {
+    try {
+      return await CliCommand._exec(cmd)
+    } catch (e) {
+      return { e, stderr: e.stderr, stdout: e.stdout }
+    }
   }
 }

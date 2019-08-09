@@ -1,5 +1,4 @@
 import { PackageCommand } from './PackageCommand'
-import chalk from 'chalk'
 import { CliElement } from '../cli/CliElement'
 
 /**

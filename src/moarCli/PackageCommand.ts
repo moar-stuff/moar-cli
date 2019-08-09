@@ -70,15 +70,4 @@ export abstract class PackageCommand extends CliCommand {
   protected get packageTheme() {
     return <PackageTheme>this.theme
   }
-
-  async exec(cmd: string) {
-    const result = await this.packageDir.exec(cmd)
-    for (const line of result.stderr.split('\n')) {
-      if (line.trim()) console.error(line)
-    }
-    const lines = result.stdout.split('\n')
-    for (const line of lines) {
-      console.log(line)
-    }
-  }
 }

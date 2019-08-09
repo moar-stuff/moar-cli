@@ -44,7 +44,7 @@ export class HelpCommand extends CliCommand {
       len += command.config.name.length
       let line = commentChalk('#')
       line += '    '
-      line += `(${command.config.alias}|${command.config.name})`
+      line += `${command.config.alias}|${command.config.name}`
       line += ' '
       line += '━'.repeat(1 + maxLen - len)
       line += ' '
@@ -55,7 +55,7 @@ export class HelpCommand extends CliCommand {
     this.apply(commandList, commandChalk)
     const optionList = []
     for (const option of this.config.options) {
-      optionList.push(`(${option.alias}|${option.name})`)
+      optionList.push(`${option.alias}|${option.name}`)
     }
     this.apply(optionList, optionChalk)
     const optionsUsage = optionChalk('options')
