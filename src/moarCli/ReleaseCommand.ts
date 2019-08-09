@@ -28,7 +28,8 @@ export class ReleaseCommand extends PackageCommand {
     for (let i = 3; i < args.length; i++) {
       let arg = args[i]
       if (CliElement.match(patchAddOpt, arg)) {
-        console.log('git flow release finish `moar at`')
+        console.log('# Use following to finish the release')
+        console.log('echo "git flow release finish `moar at`" | pbcopy')
         return
       }
     }
