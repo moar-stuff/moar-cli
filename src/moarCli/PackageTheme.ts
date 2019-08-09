@@ -1,5 +1,5 @@
 import { AnsiTransform } from '../ansi/AnsiTransform'
-import { CliTheme } from '../cli/CliTheme';
+import { CliTheme } from '../cli/CliTheme'
 
 /**
  * Transformations that work together to produce a desired appearance.

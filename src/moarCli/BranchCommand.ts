@@ -68,7 +68,7 @@ export class BranchCommand extends PackageCommand {
       simplifyNameMode: 0,
       testMerge: false,
       verify: false,
-      naked: false,      
+      naked: false,
     }
     const nakedOpt = this.options['naked-mode']
     const rawOpt = this.options['raw']
