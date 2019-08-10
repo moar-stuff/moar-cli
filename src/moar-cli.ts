@@ -4,7 +4,7 @@ import { CliElement } from './cli/CliElement'
 
 import { AtCommand } from './moarCli/AtCommand'
 import { AwsAccountCommand } from './moarCli/AwsAccountCommand'
-import { AwsCycleAccessKeyCommand } from './moarCli/AwsCycleAccessKey'
+import { AwsCycleAccessKeyCommand } from './moarCli/AwsCycleAccessKeyCommand'
 import { BranchCommand } from './moarCli/BranchCommand'
 import { EachCommand } from './moarCli/EachCommand'
 import { HelpCommand } from './moarCli/HelpCommand'
@@ -65,7 +65,7 @@ function start() {
     for (const command of commands) {
       output.push(command.config.name)
     }
-    process.stdout.write(output.join(' '))
+    process.stdout.write(output.sort().join(' '))
     return
   }
 
