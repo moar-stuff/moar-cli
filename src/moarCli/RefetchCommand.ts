@@ -1,5 +1,7 @@
-import { PackageCommand } from './PackageCommand'
 import chalk from 'chalk'
+import { PackageCommand } from './PackageCommand'
+
+import { CliCommand } from '../cli/CliCommand'
 
 /**
  * Refetch tags from origin
@@ -13,14 +15,21 @@ export class RefetchCommand extends PackageCommand {
       desc: `Delete tags and re-fetch from origin (tags under ${chalk.blue(
         'local/'
       )} are preserved)`,
-      name: 'refetch',
       example: 'moar refetch | sh',
+      name: 'refetch',
       options: [],
     })
   }
 
   protected async doRun(): Promise<void> {
-    console.log('git tag -d `git tag | grep -v "local"`')
-    console.log('git fetch --tags origin')
+    let commentLine = this.theme.commentTransform('# Use with pipe (i.e. ')
+    commentLine += this.theme.commandTransform(CliCommand.cliName)
+    commentLine += this.theme.commandTransform(' ')
+    commentLine += this.theme.commandTransform(this.config.name)
+    commentLine += this.theme.commandTransform(' | sh')
+    commentLine += this.theme.commentTransform(')')
+    this.log(commentLine)
+    this.log('git tag -d `git tag | grep -v "local"`')
+    this.log('git fetch --tags origin')
   }
 }

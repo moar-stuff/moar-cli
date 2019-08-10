@@ -1,14 +1,14 @@
-import * as packageJson from '../package.json'
-import { CliCommand } from '../cli/CliCommand'
-import { commands } from '../moar-cli'
-import { CliElement } from '../cli/CliElement'
 import { AnsiTransform } from '../ansi/AnsiTransform'
+import { CliCommand } from '../cli/CliCommand'
+import { CliElement } from '../cli/CliElement'
+import { commands } from '../moar-cli'
+import * as packageJson from '../package.json'
 
 export class HelpCommand extends CliCommand {
   private static versionOption = {
     alias: '-v',
-    name: '--version',
     desc: 'Show version',
+    name: '--version',
   }
   constructor() {
     super({
@@ -23,14 +23,14 @@ export class HelpCommand extends CliCommand {
     for (const arg of args) {
       const versionOption = HelpCommand.versionOption
       if (CliElement.match(versionOption, arg)) {
-        console.log(packageJson.version)
+        this.log(packageJson.version)
         return
       }
     }
     const commandChalk = this.theme.commandTransform
     const optionChalk = this.theme.optionTransform
     const commentChalk = this.theme.commentTransform
-    const commandList: Array<string> = []
+    const commandList: string[] = []
     let maxLen = 0
     for (const command of commands) {
       let len = 0
@@ -66,24 +66,27 @@ export class HelpCommand extends CliCommand {
         if (command !== this) {
           command._theme = this.theme
           if (CliElement.match(command.config, arg)) {
-            console.log(command.help)
+            this.log(command.help)
             return
           }
         }
       }
     }
-    console.log(
+    let syntaxLine = `${commentChalk('#')} `
+    syntaxLine += `${commandChalk('SYNTAX')}: ${commandChalk(cliName)} `
+    syntaxLine += `<${commandUsage}> [${commandChalk(
+      'help'
+    )}] [<${optionsUsage}>]`
+    this.log(
       this.trimLines(`
-      ${commentChalk('#')} ${commandChalk('SYNTAX')}: ${commandChalk(
-        cliName
-      )} <${commandUsage}> [${commandChalk('help')}] [<${optionsUsage}>]
+      ${syntaxLine}
       ${commentChalk('#')}
-      ${commentChalk(`#`)} ${commandChalk('COMMANDS')}:\n${commandList.join(
+      ${commentChalk('#')} ${commandChalk('COMMANDS')}:\n${commandList.join(
         '\n'
       )}
       ${commentChalk('#')}
-      ${commentChalk(`#`)} ${optionChalk('OPTIONS')}: ${optionList.join('|')}
-      ${commentChalk('#')}      
+      ${commentChalk('#')} ${optionChalk('OPTIONS')}: ${optionList.join('|')}
+      ${commentChalk('#')}
       ${commentChalk(
         `# EXAMPLE: ${this.theme.emphasisTransform(this.config.desc)}`
       )}

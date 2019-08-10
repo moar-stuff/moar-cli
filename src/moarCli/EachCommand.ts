@@ -1,6 +1,6 @@
-import { PackageDir } from './PackageDir'
-import { PackageCommand } from './PackageCommand'
 import { CliElement } from '../cli/CliElement'
+import { PackageCommand } from './PackageCommand'
+import { PackageDir } from './PackageDir'
 
 /**
  * Build a script to run a command in **each** package dir.
@@ -10,25 +10,25 @@ export class EachCommand extends PackageCommand {
     super({
       alias: 'e',
       desc: 'Build a script to run a command in all package directories',
-      name: 'each',
       example: 'moar each | sh',
+      name: 'each',
       options: [
         {
-          name: 'brief',
           alias: 'b',
-          type: 'boolean',
           desc: 'Provide a very brief output',
-        },
-        {
-          name: 'right',
-          alias: 'r',
+          name: 'brief',
           type: 'boolean',
-          desc: 'Put the name on the right hand of output line',
         },
         {
-          name: 'command',
+          alias: 'r',
+          desc: 'Put the name on the right hand of output line',
+          name: 'right',
+          type: 'boolean',
+        },
+        {
           alias: '',
           desc: 'Command to run in each package directory',
+          name: 'command',
         },
       ],
     })
@@ -40,8 +40,8 @@ export class EachCommand extends PackageCommand {
   async doRun(): Promise<void> {
     let brief = false
     let right = false
-    const briefOpt = this.options['brief']
-    const rightOpt = this.options['right']
+    const briefOpt = this.options.brief
+    const rightOpt = this.options.right
     const args = process.argv
     const defaultCommand = 'git remote update'
     let command = defaultCommand
@@ -84,6 +84,6 @@ export class EachCommand extends PackageCommand {
     }
     const barePackageDir = this.moarPackageDir.replace(/.*\//, '')
     buffer += `cd ../${barePackageDir} \n`
-    console.log(buffer)
+    this.log(buffer)
   }
 }

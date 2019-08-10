@@ -1,11 +1,6 @@
 import { CliOptionConfig } from './CliOptionConfig'
 
 export class CliElement {
-  name = ''
-  alias = ''
-  desc = ''
-  example?: string = ''
-
   static match(element: CliElement, text: string) {
     if (text === element.alias || text === element.name) {
       return true
@@ -48,4 +43,8 @@ export class CliElement {
     }
     throw new Error('Unable to parse value')
   }
+  name = ''
+  alias = ''
+  desc = ''
+  example?: string = ''
 }

@@ -1,7 +1,7 @@
-import { PackageCommand } from './PackageCommand'
 import child_process from 'child_process'
 import util from 'util'
 import { CliElement } from '../cli/CliElement'
+import { PackageCommand } from './PackageCommand'
 const exec = util.promisify(child_process.exec)
 
 /**
@@ -36,7 +36,7 @@ export class TagCommand extends PackageCommand {
     let message = ''
     let tag = ''
     const args = process.argv
-    const messageOpt = this.options['message']
+    const messageOpt = this.options.message
     for (let i = 3; i < args.length; i++) {
       const arg = args[i]
       if (CliElement.isOption(arg)) {
@@ -63,11 +63,9 @@ export class TagCommand extends PackageCommand {
       git.silent(true)
       await git.tag(['-s', '-m', message, tag])
       await git.raw(['push', 'origin', tag])
-      console.error(`${this.moarPackageDir} - created tag`)
+      this.log(`${this.moarPackageDir} - created tag`)
     } catch (e) {
-      console.error(
-        `💥ERROR: ${this.moarPackageDir} - unable to tag ${e.message}`
-      )
+      this.log(`💥ERROR: ${this.moarPackageDir} - unable to tag ${e.message}`)
       process.exit(1)
     }
   }

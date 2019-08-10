@@ -1,9 +1,10 @@
-import { CliCommandConfig } from './CliCommandConfig'
-import { CliOptionConfig } from './CliOptionConfig'
-import { CliTheme } from './CliTheme'
 import child_process from 'child_process'
 import util from 'util'
+
+import { CliCommandConfig } from './CliCommandConfig'
 import { CliExecResult } from './CliExecResult'
+import { CliOptionConfig } from './CliOptionConfig'
+import { CliTheme } from './CliTheme'
 
 const _cliName = process.argv[1]
   .replace(/.*\//, '')
@@ -14,28 +15,13 @@ const _cliName = process.argv[1]
  * Command provided by **moar-cli**.
  */
 export abstract class CliCommand {
-  private static _exec = util.promisify(child_process.exec)
-  _theme?: CliTheme
-
   get theme() {
-    return <CliTheme>this._theme
+    return this._theme as CliTheme
   }
 
   static get cliName() {
     return _cliName
   }
-
-  protected readonly options: Record<string, CliOptionConfig>
-
-  constructor(readonly config: CliCommandConfig) {
-    const options: Record<string, CliOptionConfig> = {}
-    for (const option of config.options) {
-      options[option.name] = option
-    }
-    this.options = options
-  }
-
-  abstract async run(errors: string[]): Promise<void>
 
   get help() {
     const commentChalk = this.theme.commentTransform
@@ -48,7 +34,7 @@ export abstract class CliCommand {
         defaultOption = option.name
       }
     }
-    let buffer = []
+    const buffer = []
     buffer.push(commentChalk('# '))
     buffer.push(commandChalk('SYNTAX'))
     buffer.push(': ')
@@ -67,7 +53,7 @@ export abstract class CliCommand {
     if (this.config.options) {
       let maxColumnLen = 0
       for (const option of this.config.options) {
-        let columnLen = this.calcOptionColumnLen(option)
+        const columnLen = this.calcOptionColumnLen(option)
         maxColumnLen = Math.max(maxColumnLen, columnLen)
       }
       this.config.options.sort((a, b) => {
@@ -90,7 +76,7 @@ export abstract class CliCommand {
       })
       for (const option of this.config.options) {
         buffer.push(commentChalk('#    '))
-        let columnBuffer: string[] = []
+        const columnBuffer: string[] = []
         if (option.alias) {
           if (option.type && option.type !== 'boolean') {
             columnBuffer.push('(')
@@ -111,7 +97,7 @@ export abstract class CliCommand {
           columnBuffer.push(optionChalk(option.name))
         }
         const column = columnBuffer.join('')
-        let columnLen = this.calcOptionColumnLen(option)
+        const columnLen = this.calcOptionColumnLen(option)
         buffer.push(column)
         buffer.push(' ')
         buffer.push('━'.repeat(maxColumnLen - columnLen))
@@ -138,20 +124,29 @@ export abstract class CliCommand {
     return buffer.join('')
   }
 
-  private calcOptionColumnLen(option: CliOptionConfig) {
-    let columnLen = option.alias
-      ? `(-${option.alias}|--${option.name})`.length
-      : option.name.length + 1
-    if (option.alias && option.type && option.type !== 'boolean') {
-      columnLen += `=<${option.type}>`.length
-    }
-    return columnLen
-  }
-
   static async run(command: CliCommand, theme: CliTheme, errors: string[]) {
     command._theme = theme
     await command.run(errors)
   }
+  private static _exec = util.promisify(child_process.exec)
+  _theme?: CliTheme
+
+  protected readonly options: Record<string, CliOptionConfig>
+
+  constructor(readonly config: CliCommandConfig) {
+    const options: Record<string, CliOptionConfig> = {}
+    for (const option of config.options) {
+      options[option.name] = option
+    }
+    this.options = options
+  }
+
+  log(text: string) {
+    process.stdout.write(text)
+    process.stdout.write('\n')
+  }
+
+  abstract async run(errors: string[]): Promise<void>
 
   trimLines(text: string) {
     const list = text.split('\n')
@@ -176,5 +171,15 @@ export abstract class CliCommand {
     } catch (e) {
       return { e, stderr: e.stderr, stdout: e.stdout }
     }
+  }
+
+  private calcOptionColumnLen(option: CliOptionConfig) {
+    let columnLen = option.alias
+      ? `(-${option.alias}|--${option.name})`.length
+      : option.name.length + 1
+    if (option.alias && option.type && option.type !== 'boolean') {
+      columnLen += `=<${option.type}>`.length
+    }
+    return columnLen
   }
 }

@@ -1,16 +1,16 @@
-import { AnsiIndicator } from '../ansi/AnsiIndicator'
-import { AnsiIndicatorConfig } from '../ansi/AnsiIndicatorConfig'
-import { AnsiTransform } from '../ansi/AnsiTransform'
-import { AnsiUtil } from '../ansi/AnsiUtil'
 import { default as chalk } from 'chalk'
-import { PackageTheme } from './PackageTheme'
-import { PrepareConfig } from './PrepareConfig'
-import { StatusResult } from 'simple-git/typings/response'
-import { TagVerify } from './TagVerify'
+import child_process from 'child_process'
 import * as fs from 'fs'
 import * as simpleGit from 'simple-git/promise'
-import child_process from 'child_process'
+import { StatusResult } from 'simple-git/typings/response'
 import util from 'util'
+import { AnsiLineBuilder } from '../ansi/AnsiLineBuilder'
+import { AnsiLineBuilderConfig } from '../ansi/AnsiLineBuilderConfig'
+import { AnsiTransform } from '../ansi/AnsiTransform'
+import { AnsiUtil } from '../ansi/AnsiUtil'
+import { PackageTheme } from './PackageTheme'
+import { PrepareConfig } from './PrepareConfig'
+import { TagVerify } from './TagVerify'
 
 /**
  * A `PackageDir` is simply a directory **GIT** repo that has a npm compatabile
@@ -20,8 +20,82 @@ import util from 'util'
  * **PackageDir** through the methods defined on this class.
  */
 export class PackageDir {
+  get trackingAreaLen(): number {
+    let len = 0
+    len += this.sign(this.goodTracking).length
+    len += this.trackingLabel.length
+    if (this.trackingToDevelop) {
+      len += ` ▲${this.trackingToDevelop}`.length
+    }
+    if (this.developToTracking) {
+      len += ` ▼${this.developToTracking}`.length
+    }
+    return len
+  }
+
+  get nameAreaLen(): number {
+    const indicator = new AnsiLineBuilder({ transform: false })
+    this.pushNameArea(indicator)
+    return indicator.content.length
+  }
+
+  get currentAreaLen(): number {
+    const indicator = new AnsiLineBuilder({ transform: false })
+    this.pushCurrentArea(indicator)
+    return indicator.content.length
+  }
+
+  get developAreaLen(): number {
+    const indicator = new AnsiLineBuilder({ transform: false })
+    this.pushDevelopArea(indicator)
+    return indicator.content.length
+  }
+
+  get masterAreaLen(): number {
+    const indicator = new AnsiLineBuilder({ transform: false })
+    this.pushMasterArea(indicator)
+    return indicator.content.length
+  }
+
+  get unmergedAreaLen(): number {
+    const indicator = new AnsiLineBuilder({ transform: false })
+    this.pushUnmergedArea(indicator)
+    return indicator.content.length
+  }
+
+  get headRelativeArea() {
+    return `${this.headRelative} by ${this.headAuthor}`
+  }
+
+  get trackingRelativeArea() {
+    return `${this.trackingRelative} by ${this.trackingAuthor}`
+  }
+
+  get developRelativeArea() {
+    return `${this.developRelative} by ${this.developAuthor}`
+  }
+
+  get masterRelativeArea() {
+    return `${this.masterRelative} by ${this.masterAuthor}`
+  }
   static defaultDomain?: string
+
+  static isGit(packageDir: string) {
+    const gitExists = fs.existsSync(packageDir + '/.git/config')
+    return gitExists
+  }
+
+  /**
+   * A no-operation transformation
+   */
+  static noopTransform(text: string) {
+    return text
+  }
   private static _exec = util.promisify(child_process.exec)
+
+  private static dropLastPathPart(workspaceDir: string) {
+    return workspaceDir.substring(0, workspaceDir.lastIndexOf('/'))
+  }
   ahead = 0
   behind = 0
   current = ''
@@ -53,7 +127,7 @@ export class PackageDir {
   unmergedBranchCount = 0
   version: string
   workspaceDir: string
-  noMerged: {
+  noMerged: Array<{
     id: string
     ahead: number
     behind: number
@@ -64,13 +138,11 @@ export class PackageDir {
       author: string
       relative: string
     }
-    relative: { good?: boolean; result?: string }
-  }[] = []
-
-  static isGit(packageDir: string) {
-    const gitExists = fs.existsSync(packageDir + '/.git/config')
-    return gitExists
-  }
+    relative: {
+      good?: boolean
+      result?: string
+    }
+  }> = []
 
   constructor(
     private workPackageDir: string,
@@ -86,10 +158,6 @@ export class PackageDir {
       this.version = ''
     }
     this.git = simpleGit.default(this.dir)
-  }
-
-  private static dropLastPathPart(workspaceDir: string) {
-    return workspaceDir.substring(0, workspaceDir.lastIndexOf('/'))
   }
 
   /**
@@ -122,6 +190,155 @@ export class PackageDir {
     }
   }
 
+  async exec(
+    cmd: string
+  ): Promise<{ e?: any; stderr: string; stdout: string }> {
+    try {
+      return await PackageDir._exec(cmd, { cwd: this.dir })
+    } catch (e) {
+      return { e, stderr: e.stderr, stdout: e.stdout }
+    }
+  }
+
+  /**
+   * Output the status label for a workspace member directory
+   */
+  getStatusLabel({
+    highlightCurrent,
+    nameArrowSize,
+    trackingPushArrowSize,
+    developPushArrowSize,
+    masterPushArrowSize,
+    unmergedPushLineSize,
+    config,
+  }: {
+    highlightCurrent?: boolean
+    nameArrowSize?: number
+    trackingPushArrowSize?: number
+    developPushArrowSize?: number
+    masterPushArrowSize?: number
+    unmergedPushLineSize?: number
+    config?: AnsiLineBuilderConfig
+  } = {}) {
+    const isCurrentDir = this.workPackageDir === this.dir
+    const lineTransform: AnsiTransform =
+      config && highlightCurrent && isCurrentDir
+        ? AnsiUtil.chalkTransform(chalk.bold)
+        : PackageDir.noopTransform
+
+    trackingPushArrowSize = trackingPushArrowSize || 1
+    developPushArrowSize = developPushArrowSize || 1
+    masterPushArrowSize = masterPushArrowSize || 1
+    unmergedPushLineSize = unmergedPushLineSize || 0
+    nameArrowSize = nameArrowSize || 1
+
+    const indicator = new AnsiLineBuilder(
+      config ? config : { transform: false }
+    )
+    if (unmergedPushLineSize > 0) {
+      indicator.pushText(
+        '━'.repeat(unmergedPushLineSize),
+        AnsiUtil.noopTransform
+      )
+      indicator.pushText(' ', AnsiUtil.noopTransform)
+    }
+    this.pushUnmergedArea(indicator)
+    indicator.pushText(' ', AnsiUtil.noopTransform)
+    this.pushNameArea(indicator, lineTransform)
+    indicator.pushArrowLine(nameArrowSize)
+    this.pushCurrentArea(indicator, lineTransform)
+    indicator.pushArrowLine(trackingPushArrowSize)
+    this.pushTrackingArea(indicator, lineTransform)
+    indicator.pushArrowLine(developPushArrowSize)
+    this.pushDevelopArea(indicator, lineTransform)
+    indicator.pushArrowLine(masterPushArrowSize)
+    this.pushMasterArea(indicator, lineTransform)
+    indicator.pushText(' │', AnsiUtil.noopTransform)
+    if (this.errorOnPrepare) {
+      indicator.pushText(' 💥ERROR', chalk.redBright)
+    } else {
+      const signChalk = this.theme.signChalk
+      const tagName = this.simplifyRefName(this.tagVerify.tag)
+      if (this.tagVerify.good === true) {
+        indicator.pushText(`●<${tagName}>`, signChalk)
+      } else if (this.tagVerify.good === false) {
+        indicator.pushText(`○<${tagName}>`, signChalk)
+      } else if (this.tagVerify.tag.length > 0) {
+        indicator.pushText(`◌<${tagName}>`, signChalk)
+      }
+      indicator.pushText(' ', AnsiUtil.noopTransform)
+      indicator.pushText(this.headRelativeArea, AnsiUtil.noopTransform)
+    }
+    const content = indicator.content
+    return content
+  }
+
+  pushTrackingArea(indicator: AnsiLineBuilder, transform: AnsiTransform) {
+    return this.pushGoodAheadBehind({
+      ahead: this.developToTracking,
+      behind: this.trackingToDevelop,
+      good: this.goodTracking,
+      indicator,
+      label: this.trackingLabel,
+      transform,
+    })
+  }
+
+  pushUnmergedArea(indicator: AnsiLineBuilder) {
+    return indicator.pushCounter(
+      'ᚮ',
+      this.unmergedBranchCount,
+      this.theme.unmergedChalk,
+      true,
+      true
+    )
+  }
+
+  pushMasterArea(indicator: AnsiLineBuilder, transform?: AnsiTransform) {
+    transform = transform || PackageDir.noopTransform
+    return indicator
+      .pushText(this.sign(this.goodMaster), this.theme.signChalk)
+      .pushText('master', transform)
+  }
+
+  pushDevelopArea(indicator: AnsiLineBuilder, transform?: AnsiTransform) {
+    transform = transform || PackageDir.noopTransform
+    return indicator
+      .pushText(this.sign(this.goodDevelop), this.theme.signChalk)
+      .pushText('develop', transform)
+      .pushCounter('▲', this.masterToDevelop, this.theme.aheadChalk)
+      .pushCounter('▼', this.developToMaster, this.theme.behindChalk)
+  }
+
+  pushNameArea(indicator: AnsiLineBuilder, transform?: AnsiTransform) {
+    transform = transform || PackageDir.noopTransform
+    return indicator
+      .pushText(this.name, transform)
+      .pushText(`@${this.version}`, this.theme.signChalk)
+      .pushCounter('▶', this.uncommited, this.theme.aheadChalk)
+  }
+
+  pushCurrentArea(indicator: AnsiLineBuilder, transform?: AnsiTransform) {
+    transform = transform || AnsiUtil.noopTransform
+    return indicator
+      .pushText(this.sign(this.goodHead), this.theme.signChalk)
+      .pushText(this.simplifyRefName(this.current), transform)
+      .pushCounter('▲', this.ahead, this.theme.aheadChalk)
+      .pushCounter('▼', this.behind, this.theme.behindChalk)
+  }
+
+  sign(good: boolean | undefined) {
+    if (good === true) {
+      return '●'
+    }
+    return good === undefined ? '◌' : '◑'
+  }
+
+  log(text: string) {
+    process.stdout.write(text)
+    process.stdout.write('\n')
+  }
+
   private prepareAheadBehind() {
     if (this.tracking) {
       this.ahead = this.status ? this.status.ahead : 0
@@ -138,8 +355,8 @@ export class PackageDir {
     const branchSummary = await this.git.branch(['-a', '--no-merged'])
     let count = 0
     if (config && config.rawMode) {
-      console.log(`SHOW: ${config.showRx}`)
-      console.log(`HIDE: ${config.hideRx}`)
+      this.log(`SHOW: ${config.showRx}`)
+      this.log(`HIDE: ${config.hideRx}`)
     }
     for (const branch of branchSummary.all) {
       const shortName = this.simplifyRefName(branch, config)
@@ -148,15 +365,15 @@ export class PackageDir {
       let behind = -1
       if (config) {
         const behindLog = await this.git.log({
-          symmetric: false,
           from: branch,
+          symmetric: false,
           to: 'HEAD',
         })
         behind = behindLog.total
 
         const aheadLog = await this.git.log({
-          symmetric: false,
           from: 'HEAD',
+          symmetric: false,
           to: branch,
         })
         ahead = aheadLog.total
@@ -172,7 +389,7 @@ export class PackageDir {
         let out = ''
         await this.git.raw(['tag', '-f', '_moar'])
         try {
-          let rawResult = await this.exec(
+          const rawResult = await this.exec(
             `git merge --allow-unrelated-histories ${branch}`
           )
           out = rawResult.stderr + '\n' + rawResult.stdout
@@ -203,14 +420,14 @@ export class PackageDir {
       }
       if (this.evaluate(raw, config) === 'show') {
         this.noMerged.push({
-          id: branch,
-          date,
-          shortName,
           ahead,
           behind,
-          relative,
+          date,
+          id: branch,
           lastCommit,
           mergeable,
+          relative,
+          shortName,
         })
         count += 1
       }
@@ -228,26 +445,16 @@ export class PackageDir {
         rule = 'show'
       }
       if (config.rawMode) {
-        console.log(`RAW: ${rule}: ${raw}`)
+        this.log(`RAW: ${rule}: ${raw}`)
       }
     }
     return rule
   }
 
-  async exec(
-    cmd: string
-  ): Promise<{ e?: any; stderr: string; stdout: string }> {
-    try {
-      return await PackageDir._exec(cmd, { cwd: this.dir })
-    } catch (e) {
-      return { e, stderr: e.stderr, stdout: e.stdout }
-    }
-  }
-
   private async prepareMaster(config: PrepareConfig) {
     const masterShowRelative = await this.prepareRelative(
       config,
-      `origin/master`
+      'origin/master'
     )
     const masterRelative = this.parseAuthorAndRelative(masterShowRelative)
     this.masterAuthor = masterRelative.author
@@ -258,7 +465,7 @@ export class PackageDir {
   private async prepareDevelop(config: PrepareConfig) {
     const developShowRelative = await this.prepareRelative(
       config,
-      `origin/develop`
+      'origin/develop'
     )
     const developRelative = this.parseAuthorAndRelative(developShowRelative)
     this.developAuthor = developRelative.author
@@ -324,45 +531,51 @@ export class PackageDir {
   private async prepareDevelopToTracking() {
     try {
       const developToTrackingLog = await this.git.log({
+        from: 'origin/develop',
         symmetric: false,
-        from: `origin/develop`,
         to: this.tracking ? this.tracking : 'HEAD',
       })
       this.developToTracking = developToTrackingLog
         ? developToTrackingLog.total
         : 0
-    } catch (e) {}
+    } catch (e) {
+      // swallow
+    }
   }
 
   private async prepareDevelopToMaster() {
     try {
       const developToMasterLog = await this.git.log({
+        from: 'origin/develop',
         symmetric: false,
-        from: `origin/develop`,
-        to: `origin/master`,
+        to: 'origin/master',
       })
       this.developToMaster = developToMasterLog ? developToMasterLog.total : 0
-    } catch (e) {}
+    } catch (e) {
+      // swallow
+    }
   }
 
   private async prepareMasterToDevelop() {
     try {
       const masterToDevelop = await this.git.log({
+        from: 'origin/master',
         symmetric: false,
-        from: `origin/master`,
-        to: `origin/develop`,
+        to: 'origin/develop',
       })
       this.masterToDevelop = masterToDevelop ? masterToDevelop.total : 0
-    } catch (e) {}
+    } catch (e) {
+      // swallow
+    }
   }
 
   private async prepareTracking(config: PrepareConfig) {
     this.tracking = this.status ? this.status.tracking : undefined
     try {
       const trackingToDevelop = await this.git.log({
-        symmetric: false,
         from: this.tracking ? this.tracking : 'HEAD',
-        to: `origin/develop`,
+        symmetric: false,
+        to: 'origin/develop',
       })
       this.trackingToDevelop = trackingToDevelop ? trackingToDevelop.total : 0
     } catch (e) {
@@ -411,18 +624,22 @@ export class PackageDir {
       this.status = await this.git.status()
       this.uncommited = this.status ? this.status.files.length : 0
       this.current = this.status.current.replace(/.*\//, '')
-    } catch (e) {}
+    } catch (e) {
+      // swallow
+    }
   }
 
   private async init() {
-    if (PackageDir.defaultDomain == undefined) {
+    if (PackageDir.defaultDomain === undefined) {
       try {
         const result = await this.git.raw(['config', 'user.email'])
         PackageDir.defaultDomain = result
           .replace(/.*\@/, '')
           .trim()
           .toLowerCase()
-      } catch (e) {}
+      } catch (e) {
+        // swallow
+      }
     }
   }
 
@@ -463,49 +680,6 @@ export class PackageDir {
     return { author, relative }
   }
 
-  get trackingAreaLen(): number {
-    let len = 0
-    len += this.sign(this.goodTracking).length
-    len += this.trackingLabel.length
-    if (this.trackingToDevelop) {
-      len += ` ▲${this.trackingToDevelop}`.length
-    }
-    if (this.developToTracking) {
-      len += ` ▼${this.developToTracking}`.length
-    }
-    return len
-  }
-
-  get nameAreaLen(): number {
-    const indicator = new AnsiIndicator()
-    this.pushNameArea(indicator)
-    return indicator.content.length
-  }
-
-  get currentAreaLen(): number {
-    const indicator = new AnsiIndicator()
-    this.pushCurrentArea(indicator)
-    return indicator.content.length
-  }
-
-  get developAreaLen(): number {
-    const indicator = new AnsiIndicator()
-    this.pushDevelopArea(indicator)
-    return indicator.content.length
-  }
-
-  get masterAreaLen(): number {
-    const indicator = new AnsiIndicator()
-    this.pushMasterArea(indicator)
-    return indicator.content.length
-  }
-
-  get unmergedAreaLen(): number {
-    const indicator = new AnsiIndicator()
-    this.pushUnmergedArea(indicator)
-    return indicator.content.length
-  }
-
   private async prepareRelative(
     config: PrepareConfig,
     id?: string
@@ -515,7 +689,9 @@ export class PackageDir {
     }
     try {
       return await this.checkSign(id, config)
-    } catch {}
+    } catch {
+      // swallow
+    }
     return { good: undefined, result: undefined }
   }
 
@@ -540,139 +716,6 @@ export class PackageDir {
     return { good: undefined, result }
   }
 
-  /**
-   * Output the status label for a workspace member directory
-   */
-  getStatusLabel({
-    highlightCurrent,
-    nameArrowSize,
-    trackingPushArrowSize,
-    developPushArrowSize,
-    masterPushArrowSize,
-    unmergedPushLineSize,
-    config,
-  }: {
-    highlightCurrent?: boolean
-    nameArrowSize?: number
-    trackingPushArrowSize?: number
-    developPushArrowSize?: number
-    masterPushArrowSize?: number
-    unmergedPushLineSize?: number
-    config?: AnsiIndicatorConfig
-  } = {}) {
-    const isCurrentDir = this.workPackageDir === this.dir
-    const lineTransform: AnsiTransform =
-      config && highlightCurrent && isCurrentDir
-        ? AnsiUtil.chalkTransform(chalk.bold)
-        : PackageDir.noopTransform
-
-    trackingPushArrowSize = trackingPushArrowSize || 1
-    developPushArrowSize = developPushArrowSize || 1
-    masterPushArrowSize = masterPushArrowSize || 1
-    unmergedPushLineSize = unmergedPushLineSize || 0
-    nameArrowSize = nameArrowSize || 1
-
-    const indicator = new AnsiIndicator(config)
-    if (unmergedPushLineSize > 0) {
-      indicator.pushText('━'.repeat(unmergedPushLineSize))
-      indicator.pushText(' ')
-    }
-    this.pushUnmergedArea(indicator)
-    indicator.pushText(' ')
-    this.pushNameArea(indicator, lineTransform)
-    indicator.pushArrowLine(nameArrowSize)
-    this.pushCurrentArea(indicator, lineTransform)
-    indicator.pushArrowLine(trackingPushArrowSize)
-    this.pushTrackingArea(indicator, lineTransform)
-    indicator.pushArrowLine(developPushArrowSize)
-    this.pushDevelopArea(indicator, lineTransform)
-    indicator.pushArrowLine(masterPushArrowSize)
-    this.pushMasterArea(indicator, lineTransform)
-    indicator.pushText(' │')
-    if (this.errorOnPrepare) {
-      indicator.pushText(' 💥ERROR', chalk.redBright)
-    } else {
-      const signChalk = this.theme.signChalk
-      if (this.tagVerify.good === true) {
-        indicator.pushText(
-          `●<${this.simplifyRefName(this.tagVerify.tag)}>`,
-          signChalk
-        )
-      } else if (this.tagVerify.good === false) {
-        indicator.pushText(
-          `○<${this.simplifyRefName(this.tagVerify.tag)}>`,
-          signChalk
-        )
-      } else if (this.tagVerify.tag.length > 0) {
-        indicator.pushText(
-          `◌<${this.simplifyRefName(this.tagVerify.tag)}>`,
-          signChalk
-        )
-      }
-      indicator.pushText(' ')
-      indicator.pushText(this.headRelativeArea)
-    }
-    let content = indicator.content
-    return content
-  }
-
-  /**
-   * A no-operation transformation
-   */
-  static noopTransform(text: string) {
-    return text
-  }
-
-  pushTrackingArea(indicator: AnsiIndicator, transform?: AnsiTransform) {
-    return this.pushGoodAheadBehind({
-      indicator,
-      transform,
-      label: this.trackingLabel,
-      good: this.goodTracking,
-      ahead: this.developToTracking,
-      behind: this.trackingToDevelop,
-    })
-  }
-
-  pushUnmergedArea(indicator: AnsiIndicator) {
-    return indicator.pushCounter(
-      'ᚮ',
-      this.unmergedBranchCount,
-      this.theme.unmergedChalk,
-      true,
-      true
-    )
-  }
-
-  pushMasterArea(indicator: AnsiIndicator, transform?: AnsiTransform) {
-    return indicator
-      .pushText(this.sign(this.goodMaster), this.theme.signChalk)
-      .pushText('master', transform)
-  }
-
-  pushDevelopArea(indicator: AnsiIndicator, transform?: AnsiTransform) {
-    return indicator
-      .pushText(this.sign(this.goodDevelop), this.theme.signChalk)
-      .pushText('develop', transform)
-      .pushCounter('▲', this.masterToDevelop, this.theme.aheadChalk)
-      .pushCounter('▼', this.developToMaster, this.theme.behindChalk)
-  }
-
-  pushNameArea(indicator: AnsiIndicator, transform?: AnsiTransform) {
-    return indicator
-      .pushText(this.name, transform)
-      .pushText(`@${this.version}`, this.theme.signChalk)
-      .pushCounter('▶', this.uncommited, this.theme.aheadChalk)
-  }
-
-  pushCurrentArea(indicator: AnsiIndicator, transform?: AnsiTransform) {
-    return indicator
-      .pushText(this.sign(this.goodHead), this.theme.signChalk)
-      .pushText(this.simplifyRefName(this.current), transform)
-      .pushCounter('▲', this.ahead, this.theme.aheadChalk)
-      .pushCounter('▼', this.behind, this.theme.behindChalk)
-  }
-
   private pushGoodAheadBehind({
     indicator,
     label,
@@ -682,12 +725,12 @@ export class PackageDir {
     transform,
     forceSignChar,
   }: {
-    indicator: AnsiIndicator
+    indicator: AnsiLineBuilder
     label: string
     good: boolean | undefined
     ahead: number
     behind: number
-    transform?: AnsiTransform
+    transform: AnsiTransform
     forceSignChar?: boolean
   }) {
     return indicator
@@ -695,28 +738,5 @@ export class PackageDir {
       .pushText(label, transform)
       .pushCounter('▲', ahead, this.theme.aheadChalk, false)
       .pushCounter('▼', behind, this.theme.behindChalk)
-  }
-
-  sign(good: boolean | undefined) {
-    if (good === true) {
-      return '●'
-    }
-    return good === undefined ? '◌' : '◑'
-  }
-
-  get headRelativeArea() {
-    return `${this.headRelative} by ${this.headAuthor}`
-  }
-
-  get trackingRelativeArea() {
-    return `${this.trackingRelative} by ${this.trackingAuthor}`
-  }
-
-  get developRelativeArea() {
-    return `${this.developRelative} by ${this.developAuthor}`
-  }
-
-  get masterRelativeArea() {
-    return `${this.masterRelative} by ${this.masterAuthor}`
   }
 }

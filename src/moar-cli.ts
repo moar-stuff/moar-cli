@@ -1,17 +1,19 @@
-import { AtCommand } from './moarCli/AtCommand'
-import { BranchCommand } from './moarCli/BranchCommand'
 import chalk from 'chalk'
-import { EachCommand } from './moarCli/EachCommand'
-import { NameCommand } from './moarCli/NameCommand'
-import { StatusCommand } from './moarCli/StatusCommand'
-import { TagCommand } from './moarCli/TagCommand'
 import { CliCommand } from './cli/CliCommand'
-import { PackageTheme } from './moarCli/PackageTheme'
-import { HelpCommand } from './moarCli/HelpCommand'
 import { CliElement } from './cli/CliElement'
+
+import { AtCommand } from './moarCli/AtCommand'
+import { AwsAccountCommand } from './moarCli/AwsAccountCommand'
+import { AwsCycleAccessKeyCommand } from './moarCli/AwsCycleAccessKey'
+import { BranchCommand } from './moarCli/BranchCommand'
+import { EachCommand } from './moarCli/EachCommand'
+import { HelpCommand } from './moarCli/HelpCommand'
+import { NameCommand } from './moarCli/NameCommand'
+import { PackageTheme } from './moarCli/PackageTheme'
 import { RefetchCommand } from './moarCli/RefetchCommand'
 import { ReleaseCommand } from './moarCli/ReleaseCommand'
-import { CycleAwsAccessKey } from './moarCli/CycleAwsAccessKey'
+import { StatusCommand } from './moarCli/StatusCommand'
+import { TagCommand } from './moarCli/TagCommand'
 
 const helpCommand = new HelpCommand()
 export const commands: CliCommand[] = []
@@ -24,32 +26,33 @@ commands.push(new StatusCommand())
 commands.push(new TagCommand())
 commands.push(new RefetchCommand())
 commands.push(new ReleaseCommand())
-commands.push(new CycleAwsAccessKey())
+commands.push(new AwsAccountCommand())
+commands.push(new AwsCycleAccessKeyCommand())
 
 const cliCommands: string[] = []
 
 const args = process.argv
-for (let i = 0; i < args.length; i++) {
-  let arg = args[i]
+for (let i = 2; i < args.length; i++) {
+  const arg = args[i]
   if (!arg.startsWith('-')) {
     cliCommands.push(arg)
   }
 }
 
-if (cliCommands.length < 3) {
+if (cliCommands.length === 0) {
   cliCommands.push('help')
 }
 
 const theme: PackageTheme = {
   aheadChalk: chalk.green,
   behindChalk: chalk.red,
+  commandTransform: chalk.yellow,
+  commentTransform: chalk.green,
+  emphasisTransform: chalk.bold,
+  optionTransform: chalk.cyan,
   signChalk: chalk.magenta,
   uncommitedChalk: chalk.cyan,
   unmergedChalk: chalk.yellow,
-  emphasisTransform: chalk.bold,
-  commandTransform: chalk.yellow,
-  commentTransform: chalk.green,
-  optionTransform: chalk.cyan,
 }
 
 const errors: string[] = []
@@ -57,8 +60,16 @@ const errors: string[] = []
 start()
 
 function start() {
-  for (let i = 0; i < cliCommands.length; i++) {
-    let cliCommand = cliCommands[i]
+  if (cliCommands[0] === 'complete') {
+    const output: string[] = []
+    for (const command of commands) {
+      output.push(command.config.name)
+    }
+    process.stdout.write(output.join(' '))
+    return
+  }
+
+  for (const cliCommand of cliCommands) {
     if (CliElement.match(helpCommand.config, cliCommand)) {
       CliCommand.run(helpCommand, theme, errors).then(() => {
         process.exit(0)
@@ -67,8 +78,7 @@ function start() {
     }
   }
 
-  for (let i = 0; i < cliCommands.length; i++) {
-    let cliCommand = cliCommands[i]
+  for (const cliCommand of cliCommands) {
     for (const command of commands) {
       if (CliElement.match(command.config, cliCommand)) {
         CliCommand.run(command, theme, errors).then(() => {

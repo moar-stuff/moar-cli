@@ -1,7 +1,7 @@
 import * as fs from 'fs'
 import { CliCommand } from '../cli/CliCommand'
-import { PackageDir } from './PackageDir'
 import { CliCommandConfig } from '../cli/CliCommandConfig'
+import { PackageDir } from './PackageDir'
 import { PackageTheme } from './PackageTheme'
 
 let _moarPackageDir: string
@@ -15,27 +15,6 @@ if (process.env.MOAR_PACKAGE_DIR) {
  * Command that must run in a repository root.
  */
 export abstract class PackageCommand extends CliCommand {
-  private _packageDir?: PackageDir
-  protected packageDirs: PackageDir[] = []
-  protected workspaceDir: string
-  protected workspaceDirs: string[]
-
-  constructor(readonly config: CliCommandConfig) {
-    super(config)
-    const pos = this.moarPackageDir.lastIndexOf('/')
-    this.workspaceDir = this.moarPackageDir.substring(0, pos)
-    this.workspaceDirs = fs.readdirSync(this.workspaceDir)
-  }
-
-  protected abstract doRun(): Promise<void>
-
-  async run(errors: string[]): Promise<void> {
-    if (this.checkPackageDir(errors)) {
-      return
-    }
-    await this.doRun()
-  }
-
   protected get moarPackageDir() {
     return _moarPackageDir
   }
@@ -47,8 +26,32 @@ export abstract class PackageCommand extends CliCommand {
         throw new Error(errors[0])
       }
     }
-    return <PackageDir>this._packageDir
+    return this._packageDir as PackageDir
   }
+
+  protected get packageTheme() {
+    return this.theme as PackageTheme
+  }
+  protected packageDirs: PackageDir[] = []
+  protected workspaceDir: string
+  protected workspaceDirs: string[]
+  private _packageDir?: PackageDir
+
+  constructor(readonly config: CliCommandConfig) {
+    super(config)
+    const pos = this.moarPackageDir.lastIndexOf('/')
+    this.workspaceDir = this.moarPackageDir.substring(0, pos)
+    this.workspaceDirs = fs.readdirSync(this.workspaceDir)
+  }
+
+  async run(errors: string[]): Promise<void> {
+    if (this.checkPackageDir(errors)) {
+      return
+    }
+    await this.doRun()
+  }
+
+  protected abstract doRun(): Promise<void>
 
   protected checkPackageDir(errors: string[]) {
     const isPackageDir = PackageDir.isGit(this.moarPackageDir)
@@ -65,9 +68,5 @@ export abstract class PackageCommand extends CliCommand {
       )
     }
     return errors.length > 0
-  }
-
-  protected get packageTheme() {
-    return <PackageTheme>this.theme
   }
 }

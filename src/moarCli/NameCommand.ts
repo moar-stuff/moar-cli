@@ -15,6 +15,6 @@ export class NameCommand extends PackageCommand {
   }
 
   async doRun(): Promise<void> {
-    console.log(this.packageDir.name)
+    this.log(this.packageDir.name)
   }
 }

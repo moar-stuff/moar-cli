@@ -1,5 +1,5 @@
-import { PackageCommand } from './PackageCommand'
 import { CliElement } from '../cli/CliElement'
+import { PackageCommand } from './PackageCommand'
 
 /**
  * Output commands to start the `git flow release` process
@@ -8,14 +8,14 @@ export class ReleaseCommand extends PackageCommand {
   constructor() {
     super({
       alias: 'R',
-      desc: `Start or finish a GIT FLOW release`,
-      name: 'release',
+      desc: 'Start or finish a GIT FLOW release',
       example: 'moar release | sh',
+      name: 'release',
       options: [
         {
           alias: 'f',
-          name: 'finish',
           desc: 'Finish the release',
+          name: 'finish',
         },
       ],
     })
@@ -23,16 +23,16 @@ export class ReleaseCommand extends PackageCommand {
 
   protected async doRun(): Promise<void> {
     const args = process.argv
-    const patchAddOpt = this.options['finish']
+    const patchAddOpt = this.options.finish
     for (let i = 3; i < args.length; i++) {
-      let arg = args[i]
+      const arg = args[i]
       if (CliElement.match(patchAddOpt, arg)) {
-        console.log('# Use following to finish the release')
-        console.log('echo "git flow release finish `moar at`" | pbcopy')
+        this.log('# Use following to finish the release')
+        this.log('echo "git flow release finish `moar at`" | pbcopy')
         return
       }
     }
-    console.log('git flow release start `moar at -m`')
-    console.log('npm version minor')
+    this.log('git flow release start `moar at -m`')
+    this.log('npm version minor')
   }
 }

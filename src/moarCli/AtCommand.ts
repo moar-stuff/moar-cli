@@ -1,5 +1,5 @@
-import { PackageCommand } from './PackageCommand'
 import { CliElement } from '../cli/CliElement'
+import { PackageCommand } from './PackageCommand'
 
 /**
  * Display the version of the current package.
@@ -39,7 +39,7 @@ export class AtCommand extends PackageCommand {
     const minorAddOpt = this.options['minor-add']
     const patchAddOpt = this.options['patch-add']
     for (let i = 3; i < args.length; i++) {
-      let arg = args[i]
+      const arg = args[i]
       if (CliElement.match(majorAddOpt, arg)) {
         version = `${Number.parseInt(versionParts[0]) + 1}.0.0`
       }
@@ -52,6 +52,6 @@ export class AtCommand extends PackageCommand {
         ) + 1}`
       }
     }
-    console.log(version)
+    this.log(version)
   }
 }

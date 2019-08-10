@@ -1,6 +1,9 @@
-import { AnsiIndicator } from '../ansi/AnsiIndicator'
-import { PackageCommand } from './PackageCommand'
+import { AnsiLineBuilder } from '../ansi/AnsiLineBuilder'
+import { AnsiUtil } from '../ansi/AnsiUtil'
+
 import { CliElement } from '../cli/CliElement'
+
+import { PackageCommand } from './PackageCommand'
 import { PrepareConfig } from './PrepareConfig'
 
 /**
@@ -10,51 +13,51 @@ export class BranchCommand extends PackageCommand {
   constructor() {
     super({
       alias: 'b',
-      name: 'branch',
       desc: 'Display branches with recent activity',
-      example: `moar branch -s'(hours|days|[1-2] weeks)'`,
+      example: "moar branch -s'(hours|days|[1-2] weeks)'",
+      name: 'branch',
       options: [
         {
-          name: 'hide',
           alias: 'h',
-          type: 'RegEx',
           desc: 'Hide using the supplied regular expression',
-        },
-        {
-          name: 'show',
-          alias: 's',
+          name: 'hide',
           type: 'RegEx',
+        },
+        {
+          alias: 's',
           desc: 'Show using the supplied regular expression',
+          name: 'show',
+          type: 'RegEx',
         },
         {
-          name: 'raw',
           alias: 'r',
-          type: 'boolean',
           desc: 'Show "raw" output (useful to understand hide/show)',
+          name: 'raw',
+          type: 'boolean',
         },
         {
-          name: 'naked-mode',
           alias: 'n',
-          type: 'boolean',
           desc: 'Display only the full branch names',
+          name: 'naked-mode',
+          type: 'boolean',
         },
         {
-          name: 'full-name',
           alias: 'f',
-          type: 'boolean',
           desc: 'Display full branch names',
+          name: 'full-name',
+          type: 'boolean',
         },
         {
-          name: 'test-merge',
           alias: 't',
-          type: 'boolean',
           desc: 'Test Merges',
+          name: 'test-merge',
+          type: 'boolean',
         },
         {
-          name: 'verify',
           alias: 'y',
-          type: 'boolean',
           desc: 'Verify Signatures',
+          name: 'verify',
+          type: 'boolean',
         },
       ],
     })
@@ -63,20 +66,20 @@ export class BranchCommand extends PackageCommand {
   async doRun() {
     const config = {
       hideRx: /$^/,
+      naked: false,
       rawMode: false,
       showRx: /.*/,
       simplifyNameMode: 0,
       testMerge: false,
       verify: false,
-      naked: false,
     }
     const nakedOpt = this.options['naked-mode']
-    const rawOpt = this.options['raw']
+    const rawOpt = this.options.raw
     const testMergeOpt = this.options['test-merge']
     const fullNameOpt = this.options['full-name']
-    const showOpt = this.options['show']
-    const hideOpt = this.options['hide']
-    const verifyOpt = this.options['verify']
+    const showOpt = this.options.show
+    const hideOpt = this.options.hide
+    const verifyOpt = this.options.verify
     const args = process.argv
     for (let i = 3; i < args.length; i++) {
       const arg = args[i]
@@ -101,7 +104,7 @@ export class BranchCommand extends PackageCommand {
       }
     }
     await this.packageDir.prepare(config)
-    console.log(this.getBranchLabel(config))
+    this.log(this.getBranchLabel(config))
   }
 
   /**
@@ -112,11 +115,11 @@ export class BranchCommand extends PackageCommand {
     const buffer: string[] = []
     if (!config.naked) {
       const statusLabel = packageDir.getStatusLabel({
-        trackingPushArrowSize: 1,
+        config: { transform: true },
         developPushArrowSize: 1,
         masterPushArrowSize: 1,
+        trackingPushArrowSize: 1,
         unmergedPushLineSize: 0,
-        config: { color: true },
       })
       if (packageDir.noMerged.length === 0) {
         buffer.push(`━> ${statusLabel}`)
@@ -126,8 +129,7 @@ export class BranchCommand extends PackageCommand {
     }
     const maxNumLen = `${packageDir.noMerged.length}`.length
     let maxShortNameLen = 1
-    for (let i = 0; i < packageDir.noMerged.length; i++) {
-      const branch = packageDir.noMerged[i]
+    for (const branch of packageDir.noMerged) {
       const len = branch.shortName.length
       maxShortNameLen = maxShortNameLen < len ? len : maxShortNameLen
     }
@@ -153,13 +155,16 @@ export class BranchCommand extends PackageCommand {
         line.push(this.packageTheme.signChalk(packageDir.sign(good)))
         line.push(shortName)
         line.push(' ━')
-        const indicator = new AnsiIndicator({ color: true })
-        indicator.pushText('━'.repeat(maxShortNameLen - shortName.length))
-        indicator.pushText(' ')
-        indicator.pushText(branch.mergeable)
+        const indicator = new AnsiLineBuilder({ transform: true })
+        indicator.pushText(
+          '━'.repeat(maxShortNameLen - shortName.length),
+          AnsiUtil.noopTransform
+        )
+        indicator.pushText(' ', AnsiUtil.noopTransform)
+        indicator.pushText(branch.mergeable, AnsiUtil.noopTransform)
         indicator.pushCounter('▲', branch.ahead, this.packageTheme.aheadChalk)
         indicator.pushCounter('▼', branch.behind, this.packageTheme.behindChalk)
-        indicator.pushText(' ')
+        indicator.pushText(' ', AnsiUtil.noopTransform)
         line.push(indicator.content)
         if (branch.lastCommit) {
           line.push(

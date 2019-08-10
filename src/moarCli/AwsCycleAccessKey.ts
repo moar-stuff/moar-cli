@@ -1,17 +1,14 @@
-import { PackageCommand } from './PackageCommand'
-import { CliElement } from '../cli/CliElement'
 import { CliCommand } from '../cli/CliCommand'
 
 /**
  * Output commands to start the `git flow release` process
  */
-export class CycleAwsAccessKey extends CliCommand {
+export class AwsCycleAccessKeyCommand extends CliCommand {
   constructor() {
     super({
       alias: 'C',
-      desc: `Cycle the AWS Access Key`,
-      name: 'cycle',
-      example: 'cycle',
+      desc: 'Cycle the AWS Access Key',
+      name: 'aws-cycle',
       options: [],
     })
   }
@@ -22,7 +19,7 @@ export class CycleAwsAccessKey extends CliCommand {
     execResult = await this.exec('aws iam create-access-key')
     const out = JSON.parse(execResult.stdout)
     const newKey = out.AccessKey.AccessKeyId
-    console.log(newKey)
+    this.log(newKey)
     const newSecret = out.AccessKey.SecretAccessKey
     execResult = await this.exec(
       `aws configure set aws_access_key_id ${newKey}`
@@ -50,7 +47,7 @@ export class CycleAwsAccessKey extends CliCommand {
   log(text: string) {
     text = text.trim()
     if (text) {
-      console.log(text)
+      super.log(text)
     }
   }
 }

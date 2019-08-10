@@ -1,4 +1,21 @@
 {
+  "extends": "tslint:recommended",
+  "rules": {
+    "trailing-comma": false,
+    "radix": false,
+    "quotemark": [true, "single", "avoid-escape", "avoid-template"],
+    "member-access": [true, "no-public"],
+    "semicolon": [true,"never"],
+    "variable-name": {
+      "options": [
+        "ban-keywords",
+        "check-format",
+        "allow-leading-underscore",
+        "allow-pascal-case"
+      ]
+    },
+    "interface-name": [false]
+  },
   "linterOptions": {
     "exclude": [
       "src/**/*.json"

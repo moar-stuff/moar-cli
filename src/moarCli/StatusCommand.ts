@@ -1,8 +1,8 @@
-import { PackageDir } from './PackageDir'
-import { PackageCommand } from './PackageCommand'
-import { PrepareConfig } from './PrepareConfig'
-import { CliElement } from '../cli/CliElement'
 import { verify } from 'crypto'
+import { CliElement } from '../cli/CliElement'
+import { PackageCommand } from './PackageCommand'
+import { PackageDir } from './PackageDir'
+import { PrepareConfig } from './PrepareConfig'
 
 /**
  * A command to show status for the Workspace.
@@ -23,29 +23,20 @@ export class StatusCommand extends PackageCommand {
     })
   }
 
-  private maxLen(prop: string) {
-    let maxLen = 0
-    for (const packageDir of this.packageDirs) {
-      let len = (<any>packageDir)[prop]
-      maxLen = len > maxLen ? len : maxLen
-    }
-    return maxLen
-  }
-
   /**
    * Displays the Status for the Workspace
    */
   protected async doRun(): Promise<void> {
     const prepareConfig: PrepareConfig = {
-      verify: false,
-      testMerge: false,
-      showRx: new RegExp('$^'),
       hideRx: new RegExp('$^'),
       naked: false,
       rawMode: false,
+      showRx: new RegExp('$^'),
       simplifyNameMode: 0,
+      testMerge: false,
+      verify: false,
     }
-    const verifyOpt = this.options['verify']
+    const verifyOpt = this.options.verify
     const args = process.argv
     for (let i = 3; i < args.length; i++) {
       const arg = args[i]
@@ -79,14 +70,14 @@ export class StatusCommand extends PackageCommand {
       return a.tagVerify.tag > b.tagVerify.tag ? 1 : -1
     })
 
-    let maxNameLen = this.maxLen('nameAreaLen')
-    let maxCurrentLen = this.maxLen('currentAreaLen')
-    let maxTrackingLen = this.maxLen('trackingAreaLen')
-    let maxDevelopLen = this.maxLen('developAreaLen')
-    let maxMasterLen = this.maxLen('masterAreaLen')
-    let maxUnmergedLen = this.maxLen('unmergedAreaLen')
+    const maxNameLen = this.maxLen('nameAreaLen')
+    const maxCurrentLen = this.maxLen('currentAreaLen')
+    const maxTrackingLen = this.maxLen('trackingAreaLen')
+    const maxDevelopLen = this.maxLen('developAreaLen')
+    const maxMasterLen = this.maxLen('masterAreaLen')
+    const maxUnmergedLen = this.maxLen('unmergedAreaLen')
 
-    const labelConfig = { color: true, size: maxDevelopLen }
+    const labelConfig = { transform: true }
     for (const memberDir of this.packageDirs) {
       const nameLen = memberDir.nameAreaLen
       const currentLen = memberDir.currentAreaLen
@@ -101,15 +92,24 @@ export class StatusCommand extends PackageCommand {
       const unmergedPushLineSize =
         1 + (maxMasterLen - masterLen) + (maxUnmergedLen - unmergedLen)
       const label = memberDir.getStatusLabel({
+        config: labelConfig,
+        developPushArrowSize,
         highlightCurrent: true,
+        masterPushArrowSize,
         nameArrowSize,
         trackingPushArrowSize,
-        developPushArrowSize,
-        masterPushArrowSize,
         unmergedPushLineSize,
-        config: labelConfig,
       })
-      console.log(label)
+      this.log(label)
     }
+  }
+
+  private maxLen(prop: string) {
+    let maxLen = 0
+    for (const packageDir of this.packageDirs) {
+      const len = (packageDir as any)[prop]
+      maxLen = len > maxLen ? len : maxLen
+    }
+    return maxLen
   }
 }
