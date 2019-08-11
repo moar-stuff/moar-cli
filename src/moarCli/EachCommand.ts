@@ -1,3 +1,4 @@
+import { CliCommand } from '../cli/CliCommand'
 import { CliElement } from '../cli/CliElement'
 import { PackageCommand } from './PackageCommand'
 import { PackageDir } from './PackageDir'
@@ -84,6 +85,13 @@ export class EachCommand extends PackageCommand {
     }
     const barePackageDir = this.moarPackageDir.replace(/.*\//, '')
     buffer += `cd ../${barePackageDir} \n`
+    let commentLine = this.theme.commentTransform('# Use with pipe (i.e. ')
+    commentLine += this.theme.commandTransform(CliCommand.cliName)
+    commentLine += this.theme.commandTransform(' ')
+    commentLine += this.theme.commandTransform(this.config.name)
+    commentLine += this.theme.commandTransform(' | sh')
+    commentLine += this.theme.commentTransform(')')
+    this.log(commentLine)
     this.log(buffer)
   }
 }
