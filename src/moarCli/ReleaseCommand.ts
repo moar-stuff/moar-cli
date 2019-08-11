@@ -30,6 +30,7 @@ export class ReleaseCommand extends PackageCommand {
       const arg = args[i]
       if (CliElement.match(finishOpt, arg)) {
         this.log(`${commentTransform('# Use with pipe')} ${commandTransform('moar release --finish | sh')}`)
+        this.log('echo "# CLIPBOARD HAS GIT FLOW FINISH COMMAND, PLEASE PASTE AND RUN"')
         this.log('echo "git flow release finish `moar at`" | pbcopy')
         return
       }
