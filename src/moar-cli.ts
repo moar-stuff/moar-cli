@@ -50,7 +50,7 @@ const theme: PackageTheme = {
   commentTransform: chalk.green,
   emphasisTransform: chalk.bold,
   optionTransform: chalk.cyan,
-  signChalk: chalk.magenta,
+  signChalk: chalk.yellow,
   uncommitedChalk: chalk.cyan,
   unmergedChalk: chalk.yellow,
 }
