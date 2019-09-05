@@ -35,15 +35,15 @@ export class AwsAccountCommand extends CliCommand {
   }
 
   async run(errors: string[]): Promise<void> {
-    let id = await this.getAccountId()
-
     const nicknames: Record<string, string> = this.readNicknames()
 
+    let id = await this.getAccountId()
     if (id != null) {
       nicknames[id] = nicknames[id] || id
       this.handleNicknameParam(nicknames, id)
-      id = await this.handleSwitchTo(nicknames, id)
     }
+
+    id = await this.handleSwitchTo(nicknames, id)
 
     this.showOutput(nicknames, id)
   }
@@ -52,10 +52,12 @@ export class AwsAccountCommand extends CliCommand {
    * Read nicknames.
    */
   private readNicknames() {
-    let nicknames: Record<string, string> = {}
+    let nicknames: Record<string, string>
     if (fs.existsSync(this.nicknamesPath)) {
       const nicknamesBuffer = fs.readFileSync(this.nicknamesPath)
       nicknames = JSON.parse(nicknamesBuffer.toString())
+    } else {
+      nicknames = {}
     }
     return nicknames
   }
@@ -107,24 +109,28 @@ export class AwsAccountCommand extends CliCommand {
     return switchTo
   }
 
-  private async handleSwitchTo(nicknames: Record<string, string>, id: string) {
+  /**
+   * Handle the switch to option.
+   *
+   * @param nicknames Nickname Record
+   * @param id Current ID
+   */
+  private async handleSwitchTo(nicknames: Record<string, string>, id?: string) {
     const switchTo = this.readSwitchToParam()
     const keys = Object.keys(nicknames)
-    let n = 0
-    for (const key of keys) {
-      n++
-      if (n === switchTo) {
+    if (switchTo) {
+      if (id) {
         await this.exec(`
           mkdir -p ${this.moarPath}/aws-${id} && \
           rm -rf ${this.moarPath}/aws-${id}/* && \
           cp -r ${process.env.HOME}/.aws/* ${this.moarPath}/aws-${id}
         `)
-        id = keys[switchTo - 1]
-        await this.exec(`
-          rm -rf ${process.env.HOME}/.aws/*
-          cp -r ${this.moarPath}/aws-${id}/* ${process.env.HOME}/.aws
-        `)
       }
+      id = keys[switchTo - 1]
+      await this.exec(`
+        rm -rf ${process.env.HOME}/.aws/*
+        cp -r ${this.moarPath}/aws-${id}/* ${process.env.HOME}/.aws
+      `)
     }
     return id
   }
