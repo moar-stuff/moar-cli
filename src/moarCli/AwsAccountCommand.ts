@@ -95,18 +95,20 @@ export class AwsAccountCommand extends CliCommand {
     }
   }
 
+  /**
+   * Read the value of of the switch to param
+   */
   private readSwitchToParam() {
     const args1 = process.argv
-    let switchTo = 0
     const switchOpt = this.options.switch
     for (let i = 2; i < args1.length; i++) {
       const arg = args1[i]
       if (CliElement.match(switchOpt, arg)) {
         const value = CliElement.value(switchOpt, args1, i)
-        switchTo = Number.parseInt(value)
+        return Number.parseInt(value)
       }
     }
-    return switchTo
+    return 0
   }
 
   /**
