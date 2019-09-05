@@ -4,12 +4,16 @@ import { CliCommand } from '../cli/CliCommand'
 import { CliElement } from '../cli/CliElement'
 
 /**
- * Output commands to start the `git flow release` process
+ * The AWS Account Comamnd associates AWS Accounts with nicknames and allows
+ * switching from one account to another.
  */
 export class AwsAccountCommand extends CliCommand {
   private moarPath = `${process.env.HOME}/.moar`
   private nicknamesPath = `${this.moarPath}/aws-nicknames.json`
 
+  /**
+   * Construct the command.
+   */
   constructor() {
     super({
       alias: 'A',
@@ -41,6 +45,9 @@ export class AwsAccountCommand extends CliCommand {
     this.showOutput(id, nicknames)
   }
 
+  /**
+   * Read nicknames.
+   */
   private readNicknames() {
     let nicknames: Record<string, string> = {}
     if (fs.existsSync(this.nicknamesPath)) {
@@ -50,6 +57,9 @@ export class AwsAccountCommand extends CliCommand {
     return nicknames
   }
 
+  /**
+   * Get the current AWS AccountId or return null if one can not be determined.
+   */
   private async getAccountId() {
     const execResult = await this.exec(
       "aws sts get-caller-identity --output text --query 'Account'"
@@ -58,6 +68,13 @@ export class AwsAccountCommand extends CliCommand {
     return id
   }
 
+  /**
+   * Handle the nickname param to set the descriptive nickname for the current
+   * AWS account.
+   *
+   * @param nicknames Nicknames record
+   * @param id ID for the current account
+   */
   private handleNicknameParam(nicknames: Record<string, string>, id: string) {
     const args2 = process.argv
     const setNicknameOpt = this.options.nickname

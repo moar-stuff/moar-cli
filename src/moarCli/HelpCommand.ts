@@ -4,6 +4,9 @@ import { CliElement } from '../cli/CliElement'
 import { commands } from '../moar-cli'
 import * as packageJson from '../package.json'
 
+/**
+ * The HelpCommand displays information about other commands.
+ */
 export class HelpCommand extends CliCommand {
   private static versionOption = {
     alias: '-v',

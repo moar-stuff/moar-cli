@@ -133,6 +133,11 @@ export abstract class CliCommand {
 
   protected readonly options: Record<string, CliOptionConfig>
 
+  /**
+   * Construct the command with configuraton options.
+   *
+   * @param config Configuration for the command.
+   */
   constructor(readonly config: CliCommandConfig) {
     const options: Record<string, CliOptionConfig> = {}
     for (const option of config.options) {
@@ -146,6 +151,11 @@ export abstract class CliCommand {
     process.stdout.write('\n')
   }
 
+  /**
+   * The `run` method defines the entry point for the execution of a command.
+   *
+   * @param errors Array used to return errors.
+   */
   abstract async run(errors: string[]): Promise<void>
 
   trimLines(text: string) {
