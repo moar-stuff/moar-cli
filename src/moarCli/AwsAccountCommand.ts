@@ -135,6 +135,12 @@ export class AwsAccountCommand extends CliCommand {
     return id
   }
 
+  /**
+   * Show command output
+   *
+   * @param nicknames Nicknames record
+   * @param id Current AWS Account ID
+   */
   private showOutput(nicknames: Record<string, string>, id?: string) {
     const keys = Object.keys(nicknames)
     let n2 = 0
