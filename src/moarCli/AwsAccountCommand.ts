@@ -38,11 +38,14 @@ export class AwsAccountCommand extends CliCommand {
     let id = await this.getAccountId()
 
     const nicknames: Record<string, string> = this.readNicknames()
-    nicknames[id] = nicknames[id] || id
 
-    this.handleNicknameParam(nicknames, id)
-    id = await this.handleSwitchTo(nicknames, id)
-    this.showOutput(id, nicknames)
+    if (id != null) {
+      nicknames[id] = nicknames[id] || id
+      this.handleNicknameParam(nicknames, id)
+      id = await this.handleSwitchTo(nicknames, id)
+    }
+
+    this.showOutput(nicknames, id)
   }
 
   /**
@@ -64,8 +67,7 @@ export class AwsAccountCommand extends CliCommand {
     const execResult = await this.exec(
       "aws sts get-caller-identity --output text --query 'Account'"
     )
-    const id = execResult.stdout.trim()
-    return id
+    return execResult.e ? undefined : execResult.stdout.trim()
   }
 
   /**
@@ -127,7 +129,7 @@ export class AwsAccountCommand extends CliCommand {
     return id
   }
 
-  private showOutput(id: string, nicknames: Record<string, string>) {
+  private showOutput(nicknames: Record<string, string>, id?: string) {
     const keys = Object.keys(nicknames)
     let n2 = 0
     for (const key of keys) {
