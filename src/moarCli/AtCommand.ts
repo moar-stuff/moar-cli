@@ -5,6 +5,9 @@ import { PackageCommand } from './PackageCommand'
  * Display the version of the current package.
  */
 export class AtCommand extends PackageCommand {
+  /**
+   * Construct the command
+   */
   constructor() {
     super({
       alias: 'a',
@@ -33,7 +36,6 @@ export class AtCommand extends PackageCommand {
 
   async doRun(): Promise<void> {
     let version = this.packageDir.version
-    const versionParts = version.split('.')
     const args = process.argv
     const majorAddOpt = this.options['major-add']
     const minorAddOpt = this.options['minor-add']
@@ -41,12 +43,15 @@ export class AtCommand extends PackageCommand {
     for (let i = 3; i < args.length; i++) {
       const arg = args[i]
       if (CliElement.match(majorAddOpt, arg)) {
+        const versionParts = version.split('.')
         version = `${Number.parseInt(versionParts[0]) + 1}.0.0`
       }
       if (CliElement.match(minorAddOpt, arg)) {
+        const versionParts = version.split('.')
         version = `${versionParts[0]}.${Number.parseInt(versionParts[1]) + 1}.0`
       }
       if (CliElement.match(patchAddOpt, arg)) {
+        const versionParts = version.split('.')
         version = `${versionParts[0]}.${versionParts[1]}.${Number.parseInt(
           versionParts[2]
         ) + 1}`
