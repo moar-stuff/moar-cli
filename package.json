@@ -23,7 +23,7 @@
   "dependencies": {
     "@types/node": "^12.6.1",
     "chalk": "^2.4.2",
-    "simple-git": "^1.120.0",
+    "simple-git": "^3.5.0",
     "ts-node": "^8.3.0",
     "typescript": "^3.5.3"
   },
